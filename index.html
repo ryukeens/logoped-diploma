@@ -94,52 +94,141 @@
         <div id="results-screen" class="hidden">
             <button class="back-btn" onclick="showMainMenu()">← Назад</button>
             <h2>Мои результаты</h2>
+            
             <div class="stats-container">
                 <div class="stat-card">
+                    <div class="stat-icon">📝</div>
                     <div class="stat-value" id="total-exercises">0</div>
                     <div class="stat-label">Выполнено упражнений</div>
                 </div>
                 <div class="stat-card">
+                    <div class="stat-icon">✨</div>
                     <div class="stat-value" id="success-rate">0%</div>
                     <div class="stat-label">Успешность</div>
                 </div>
                 <div class="stat-card">
+                    <div class="stat-icon">⏱️</div>
                     <div class="stat-value" id="avg-time">0</div>
                     <div class="stat-label">Среднее время (сек)</div>
                 </div>
             </div>
-            <div class="progress-bar">
-                <div class="progress-fill" id="progress-fill"></div>
+            
+            <div class="progress-section">
+                <h3>Общий прогресс</h3>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progress-fill"></div>
+                </div>
+            </div>
+            
+            <div class="achievement-section">
+                <h3>Оценка</h3>
+                <div class="achievement-card" id="achievement-message">
+                    <div class="achievement-icon">🎯</div>
+                    <div class="achievement-text">Начни выполнять упражнения, чтобы увидеть свой прогресс!</div>
+                </div>
+            </div>
+            
+            <div class="module-stats">
+                <h3>Статистика по модулям</h3>
+                <div class="module-stat-item">
+                    <span class="module-name">Модуль 1: Ориентировка</span>
+                    <span class="module-count" id="module1-count">0</span>
+                </div>
+                <div class="module-stat-item">
+                    <span class="module-name">Модуль 2: Дорожки</span>
+                    <span class="module-count" id="module2-count">0</span>
+                </div>
             </div>
         </div>
 
         <div id="info-screen" class="hidden">
             <button class="back-btn" onclick="showMainMenu()">← Назад</button>
             <h2>Информация для взрослых</h2>
+            
             <div class="info-content">
-                <section>
-                    <h3>О системе</h3>
+                <section class="info-section">
+                    <h3>📖 О системе</h3>
                     <p>Данный веб-ресурс предназначен для формирования графо-моторных навыков у детей старшего дошкольного и младшего школьного возраста со стёртой формой дизартрии.</p>
                 </section>
-                <section>
-                    <h3>Рекомендации по использованию</h3>
+                
+                <section class="info-section tip">
+                    <div class="section-header">
+                        <span class="section-icon">💡</span>
+                        <h3>Как помогать ребёнку</h3>
+                    </div>
                     <ul>
-                        <li>Продолжительность одного занятия: 10-15 минут</li>
-                        <li>Рекомендуемая частота: 3-4 раза в неделю</li>
-                        <li>Упражнения выполняются пальцем или недорогим стилусом</li>
-                        <li>Система дополняет традиционную работу на бумаге</li>
+                        <li>Сядьте рядом с ребёнком, но не выполняйте задание за него</li>
+                        <li>Хвалите за старание, а не только за результат</li>
+                        <li>При затруднениях покажите образец, но дайте выполнить самостоятельно</li>
+                        <li>Делайте короткие перерывы между упражнениями</li>
+                        <li>Не сравнивайте с другими детьми</li>
                     </ul>
                 </section>
-                <section>
-                    <h3>Модули системы</h3>
-                    <p><strong>Модуль 1:</strong> Развитие зрительно-пространственной организации</p>
-                    <p><strong>Модуль 2:</strong> Зрительно-моторная координация и плавность движений</p>
-                    <p><strong>Модуль 3:</strong> Формирование предпосылок письма</p>
-                    <p><strong>Модуль 4:</strong> Динамический праксис и переключаемость</p>
-                    <p><strong>Модуль 5:</strong> Зрительно-моторное соотнесение</p>
-                    <p><strong>Модуль 6:</strong> Пространственная ориентировка и регуляция</p>
-                    <p><strong>Модуль 7:</strong> Произвольная регуляция и самоконтроль</p>
-                    <p><strong>Модуль 8:</strong> Закрепление навыков в игровой форме</p>
+                
+                <section class="info-section warning">
+                    <div class="section-header">
+                        <span class="section-icon">⚠️</span>
+                        <h3>Маркеры утомления</h3>
+                    </div>
+                    <p><strong>Прекратите занятие, если заметили:</strong></p>
+                    <ul>
+                        <li>Ребёнок начал отвлекаться и смотреть по сторонам</li>
+                        <li>Движения стали неточными, появилась небрежность</li>
+                        <li>Ребёнок жалуется на усталость руки</li>
+                        <li>Появилась раздражительность или нежелание продолжать</li>
+                        <li>Увеличилось количество ошибок</li>
+                    </ul>
+                </section>
+                
+                <section class="info-section settings">
+                    <div class="section-header">
+                        <span class="section-icon">⚙️</span>
+                        <h3>Настройка сессии</h3>
+                    </div>
+                    <div class="settings-grid">
+                        <div class="setting-item">
+                            <strong>Продолжительность:</strong>
+                            <span>10-15 минут</span>
+                        </div>
+                        <div class="setting-item">
+                            <strong>Частота:</strong>
+                            <span>3-4 раза в неделю</span>
+                        </div>
+                        <div class="setting-item">
+                            <strong>Время суток:</strong>
+                            <span>Утро или первая половина дня</span>
+                        </div>
+                        <div class="setting-item">
+                            <strong>Инструмент:</strong>
+                            <span>Палец или недорогой стилус</span>
+                        </div>
+                    </div>
+                </section>
+                
+                <section class="info-section">
+                    <h3>🎯 Модули системы</h3>
+                    <div class="modules-info">
+                        <div class="module-info-item">
+                            <strong>Модуль 1:</strong> Развитие зрительно-пространственной организации
+                        </div>
+                        <div class="module-info-item">
+                            <strong>Модуль 2:</strong> Зрительно-моторная координация и плавность движений
+                        </div>
+                        <div class="module-info-item">
+                            <strong>Модуль 3:</strong> Формирование предпосылок письма
+                        </div>
+                        <div class="module-info-item">
+                            <strong>Модуль 4:</strong> Динамический праксис и переключаемость
+                        </div>
+                    </div>
+                </section>
+                
+                <section class="info-section important">
+                    <div class="section-header">
+                        <span class="section-icon">❗</span>
+                        <h3>Важно помнить</h3>
+                    </div>
+                    <p>Система дополняет традиционную логопедическую работу, но не заменяет её. Регулярные занятия с логопедом остаются необходимыми.</p>
                 </section>
             </div>
         </div>

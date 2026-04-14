@@ -11,7 +11,13 @@ let targetZone = null; // Зона для проверки попадания
 let stats = {
     totalExercises: 0,
     successfulExercises: 0,
-    totalTime: 0
+    totalTime: 0,
+    moduleStats: {
+        module1: 0,
+        module2: 0,
+        module3: 0,
+        module4: 0
+    }
 };
 
 // Переменные для модуля 2 (Дорожки)
@@ -1329,6 +1335,15 @@ function nextExercise() {
         stats.totalExercises++;
         stats.successfulExercises++;
         stats.totalTime += timeSpent;
+        
+        // Сохранение статистики по модулям
+        if (currentModule) {
+            const moduleKey = `module${currentModule}`;
+            if (stats.moduleStats[moduleKey] !== undefined) {
+                stats.moduleStats[moduleKey]++;
+            }
+        }
+        
         saveStats();
     }
     
@@ -1362,17 +1377,71 @@ function exitExercise() {
 
 // Обновление результатов
 function updateResultsDisplay() {
-    document.getElementById('total-exercises').textContent = stats.totalExercises;
+    const totalEx = stats.totalExercises || 0;
+    const successEx = stats.successfulExercises || 0;
+    const totalTime = stats.totalTime || 0;
     
-    const successRate = stats.totalExercises > 0 
-        ? Math.round((stats.successfulExercises / stats.totalExercises) * 100)
+    document.getElementById('total-exercises').textContent = totalEx;
+    
+    const successRate = totalEx > 0 
+        ? Math.round((successEx / totalEx) * 100)
         : 0;
     document.getElementById('success-rate').textContent = successRate + '%';
     
-    const avgTime = stats.totalExercises > 0
-        ? Math.round(stats.totalTime / stats.totalExercises)
+    const avgTime = totalEx > 0
+        ? Math.round(totalTime / totalEx)
         : 0;
     document.getElementById('avg-time').textContent = avgTime;
     
-    document.getElementById('progress-fill').style.width = Math.min(successRate, 100) + '%';
+    // Обновление прогресс-бара
+    const progressFill = document.getElementById('progress-fill');
+    progressFill.style.width = Math.min(successRate, 100) + '%';
+    progressFill.textContent = successRate + '%';
+    
+    // Обновление оценки
+    updateAchievementMessage(successRate, totalEx);
+    
+    // Обновление статистики по модулям
+    updateModuleStats();
+}
+
+// Обновление сообщения о достижениях
+function updateAchievementMessage(successRate, totalEx) {
+    const achievementCard = document.getElementById('achievement-message');
+    const icon = achievementCard.querySelector('.achievement-icon');
+    const text = achievementCard.querySelector('.achievement-text');
+    
+    if (totalEx === 0) {
+        icon.textContent = '🎯';
+        text.textContent = 'Начни выполнять упражнения, чтобы увидеть свой прогресс!';
+        achievementCard.style.background = 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)';
+    } else if (successRate >= 90) {
+        icon.textContent = '🏆';
+        text.textContent = 'Превосходно! У тебя отличный уровень контроля и точности!';
+        achievementCard.style.background = 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)';
+    } else if (successRate >= 80) {
+        icon.textContent = '⭐';
+        text.textContent = 'Отлично! Ты очень хорошо справляешься с заданиями!';
+        achievementCard.style.background = 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)';
+    } else if (successRate >= 70) {
+        icon.textContent = '👍';
+        text.textContent = 'Хорошо! Продолжай тренироваться, и результат будет ещё лучше!';
+        achievementCard.style.background = 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)';
+    } else if (successRate >= 50) {
+        icon.textContent = '💪';
+        text.textContent = 'Неплохо! Ты на правильном пути, продолжай стараться!';
+        achievementCard.style.background = 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)';
+    } else {
+        icon.textContent = '🌱';
+        text.textContent = 'Начало положено! Не сдавайся, с каждым разом будет получаться лучше!';
+        achievementCard.style.background = 'linear-gradient(135deg, #30cfd0 0%, #330867 100%)';
+    }
+}
+
+// Обновление статистики по модулям
+function updateModuleStats() {
+    const moduleStats = stats.moduleStats || {};
+    
+    document.getElementById('module1-count').textContent = moduleStats.module1 || 0;
+    document.getElementById('module2-count').textContent = moduleStats.module2 || 0;
 }
