@@ -127,7 +127,7 @@ function getModuleExercises(moduleNum) {
             { title: 'Прямые линии', type: 'path-lines', instruction: 'Обведи все прямые линии сверху вниз', subTasks: 5 },
             { title: 'Наклонные линии', type: 'path-diagonal', instruction: 'Обведи все наклонные линии', subTasks: 8 },
             { title: 'Круги', type: 'path-circles', instruction: 'Обведи все круги по контуру', subTasks: 6 },
-            { title: 'Дуги', type: 'path-arcs', instruction: 'Обведи все дуги плавным движением', subTasks: 8 },
+            { title: 'Дуги', type: 'path-arcs', instruction: 'Обведи все дуги плавным движением', subTasks: 5 },
             { title: 'Пружинка', type: 'path-loops', instruction: 'Обведи волнистые линии слева направо', subTasks: 3 }
         ],
         4: [
@@ -621,21 +621,21 @@ function startDrawingPath(e) {
                 }
             }
         } else if (currentExercise.type === 'path-arcs') {
-            // Дуги - 4 дуги справа в столбик (вверх) + 4 дуги слева в столбик (вниз)
+            // Дуги - 5 дуг по центру, смотрящих вниз
             const radius = Math.min(45, canvas.width * 0.09);
-            const leftX = canvas.width * 0.25;
-            const rightX = canvas.width * 0.75;
+            const centerX = canvas.width * 0.5;
             const topY1 = canvas.height * 0.15;
-            const topY2 = canvas.height * 0.35;
-            const topY3 = canvas.height * 0.55;
-            const topY4 = canvas.height * 0.75;
+            const topY2 = canvas.height * 0.3;
+            const topY3 = canvas.height * 0.45;
+            const topY4 = canvas.height * 0.6;
+            const topY5 = canvas.height * 0.75;
             
-            // Проверяем 4 дуги справа (стартовая точка справа)
-            const rightYPositions = [topY1, topY2, topY3, topY4];
-            for (let i = 0; i < 4; i++) {
+            // Проверяем 5 дуг (стартовая точка слева)
+            const yPositions = [topY1, topY2, topY3, topY4, topY5];
+            for (let i = 0; i < 5; i++) {
                 if (!completedSubTasks.includes(i)) {
-                    const cy = rightYPositions[i];
-                    const startX_point = rightX + radius; // Справа
+                    const cy = yPositions[i];
+                    const startX_point = centerX - radius; // Слева
                     const startY_point = cy;
                     const distance = Math.sqrt(
                         Math.pow(pos.x - startX_point, 2) + 
@@ -645,27 +645,6 @@ function startDrawingPath(e) {
                     if (distance <= 30) {
                         nearStart = true;
                         break;
-                    }
-                }
-            }
-            
-            // Проверяем 4 дуги слева (стартовая точка слева)
-            if (!nearStart) {
-                const leftYPositions = [topY1, topY2, topY3, topY4];
-                for (let i = 0; i < 4; i++) {
-                    if (!completedSubTasks.includes(i + 4)) {
-                        const cy = leftYPositions[i];
-                        const startX_point = leftX - radius; // Слева
-                        const startY_point = cy;
-                        const distance = Math.sqrt(
-                            Math.pow(pos.x - startX_point, 2) + 
-                            Math.pow(pos.y - startY_point, 2)
-                        );
-                        
-                        if (distance <= 30) {
-                            nearStart = true;
-                            break;
-                        }
                     }
                 }
             }
@@ -904,40 +883,21 @@ function drawPathWithCheck(pos) {
                 }
             }
         } else if (currentExercise.type === 'path-arcs') {
-            // Дуги
+            // Дуги - 5 дуг по центру, смотрящих вниз
             const radius = Math.min(45, canvas.width * 0.09);
-            const leftX = canvas.width * 0.25;
-            const rightX = canvas.width * 0.75;
+            const centerX = canvas.width * 0.5;
             const topY1 = canvas.height * 0.15;
-            const topY2 = canvas.height * 0.35;
-            const topY3 = canvas.height * 0.55;
-            const topY4 = canvas.height * 0.75;
+            const topY2 = canvas.height * 0.3;
+            const topY3 = canvas.height * 0.45;
+            const topY4 = canvas.height * 0.6;
+            const topY5 = canvas.height * 0.75;
             
-            // Проверяем 4 дуги справа (финиш слева)
-            const rightYPositions = [topY1, topY2, topY3, topY4];
-            for (let i = 0; i < 4; i++) {
+            // Проверяем 5 дуг (финиш справа)
+            const yPositions = [topY1, topY2, topY3, topY4, topY5];
+            for (let i = 0; i < 5; i++) {
                 if (!completedSubTasks.includes(i)) {
-                    const cy = rightYPositions[i];
-                    const endX_point = rightX - radius; // Слева
-                    const endY_point = cy;
-                    const distanceToFinish = Math.sqrt(
-                        Math.pow(pos.x - endX_point, 2) + 
-                        Math.pow(pos.y - endY_point, 2)
-                    );
-                    
-                    if (distanceToFinish <= 30) {
-                        completePathExercise();
-                        return;
-                    }
-                }
-            }
-            
-            // Проверяем 4 дуги слева (финиш справа)
-            const leftYPositions = [topY1, topY2, topY3, topY4];
-            for (let i = 0; i < 4; i++) {
-                if (!completedSubTasks.includes(i + 4)) {
-                    const cy = leftYPositions[i];
-                    const endX_point = leftX + radius; // Справа
+                    const cy = yPositions[i];
+                    const endX_point = centerX + radius; // Справа
                     const endY_point = cy;
                     const distanceToFinish = Math.sqrt(
                         Math.pow(pos.x - endX_point, 2) + 
@@ -1147,21 +1107,21 @@ function completePathExercise() {
                     }
                 }
             } else if (currentExercise.type === 'path-arcs') {
-                // Дуги
+                // Дуги - 5 дуг по центру, смотрящих вниз
                 const radius = Math.min(45, canvas.width * 0.09);
-                const leftX = canvas.width * 0.25;
-                const rightX = canvas.width * 0.75;
+                const centerX = canvas.width * 0.5;
                 const topY1 = canvas.height * 0.15;
-                const topY2 = canvas.height * 0.35;
-                const topY3 = canvas.height * 0.55;
-                const topY4 = canvas.height * 0.75;
+                const topY2 = canvas.height * 0.3;
+                const topY3 = canvas.height * 0.45;
+                const topY4 = canvas.height * 0.6;
+                const topY5 = canvas.height * 0.75;
                 
-                // Проверяем 4 дуги справа (финиш слева)
-                const rightYPositions = [topY1, topY2, topY3, topY4];
-                for (let i = 0; i < 4; i++) {
+                // Проверяем 5 дуг (финиш справа)
+                const yPositions = [topY1, topY2, topY3, topY4, topY5];
+                for (let i = 0; i < 5; i++) {
                     if (!completedSubTasks.includes(i)) {
-                        const cy = rightYPositions[i];
-                        const endX_point = rightX - radius;
+                        const cy = yPositions[i];
+                        const endX_point = centerX + radius;
                         const endY_point = cy;
                         const distance = Math.sqrt(
                             Math.pow(lastPoint.x - endX_point, 2) + 
@@ -1171,25 +1131,6 @@ function completePathExercise() {
                         if (distance < minDistance && distance <= 30) {
                             minDistance = distance;
                             completedLine = i;
-                        }
-                    }
-                }
-                
-                // Проверяем 4 дуги слева (финиш справа)
-                const leftYPositions = [topY1, topY2, topY3, topY4];
-                for (let i = 0; i < 4; i++) {
-                    if (!completedSubTasks.includes(i + 4)) {
-                        const cy = leftYPositions[i];
-                        const endX_point = leftX + radius;
-                        const endY_point = cy;
-                        const distance = Math.sqrt(
-                            Math.pow(lastPoint.x - endX_point, 2) + 
-                            Math.pow(lastPoint.y - endY_point, 2)
-                        );
-                        
-                        if (distance < minDistance && distance <= 30) {
-                            minDistance = distance;
-                            completedLine = i + 4;
                         }
                     }
                 }
@@ -2321,43 +2262,26 @@ function drawPathCircles() {
     }
 }
 
-// Дуги - 4 дуги справа в столбик (вверх) + 4 дуги слева в столбик (вниз)
+// Дуги - 5 дуг по центру, смотрящих вниз
 function drawPathArcs() {
     // Адаптивные размеры для мобильных устройств
     const radius = Math.min(45, canvas.width * 0.09);
-    const leftX = canvas.width * 0.25; // Левая колонка - 25% от ширины
-    const rightX = canvas.width * 0.75; // Правая колонка - 75% от ширины
+    const centerX = canvas.width * 0.5; // Центр экрана
     
-    // Позиции дуг в столбиках
+    // Позиции 5 дуг в столбик по центру
     const topY1 = canvas.height * 0.15;    // Первая дуга
-    const topY2 = canvas.height * 0.35;    // Вторая дуга
-    const topY3 = canvas.height * 0.55;    // Третья дуга
-    const topY4 = canvas.height * 0.75;    // Четвертая дуга
+    const topY2 = canvas.height * 0.3;     // Вторая дуга
+    const topY3 = canvas.height * 0.45;    // Третья дуга
+    const topY4 = canvas.height * 0.6;     // Четвертая дуга
+    const topY5 = canvas.height * 0.75;    // Пятая дуга
     
     pathPoints = [];
     
     // Генерируем точки траектории для ВСЕХ дуг сразу
-    // 4 дуги справа (смотрят вверх)
-    const rightYPositions = [topY1, topY2, topY3, topY4];
-    for (let i = 0; i < 4; i++) {
-        const cy = rightYPositions[i];
-        const startAngle = 0;
-        const endAngle = Math.PI;
-        
-        const steps = 50;
-        for (let j = 0; j <= steps; j++) {
-            const t = j / steps;
-            const angle = startAngle + (endAngle - startAngle) * t;
-            const px = rightX + Math.cos(angle) * radius;
-            const py = cy - Math.sin(angle) * radius; // Минус для направления вверх
-            pathPoints.push({ x: px, y: py });
-        }
-    }
-    
-    // 4 дуги слева (смотрят вниз)
-    const leftYPositions = [topY1, topY2, topY3, topY4];
-    for (let i = 0; i < 4; i++) {
-        const cy = leftYPositions[i];
+    // 5 дуг по центру (смотрят вниз)
+    const yPositions = [topY1, topY2, topY3, topY4, topY5];
+    for (let i = 0; i < 5; i++) {
+        const cy = yPositions[i];
         const startAngle = Math.PI;
         const endAngle = Math.PI * 2;
         
@@ -2365,7 +2289,7 @@ function drawPathArcs() {
         for (let j = 0; j <= steps; j++) {
             const t = j / steps;
             const angle = startAngle + (endAngle - startAngle) * t;
-            const px = leftX + Math.cos(angle) * radius;
+            const px = centerX + Math.cos(angle) * radius;
             const py = cy + Math.sin(angle) * radius; // Плюс для направления вниз
             pathPoints.push({ x: px, y: py });
         }
@@ -2374,69 +2298,10 @@ function drawPathArcs() {
     const lineWidth = Math.min(30, canvas.width * 0.05);
     const pointSize = Math.min(12, canvas.width * 0.025);
     
-    // Рисуем 4 дуги справа (смотрят вверх)
-    for (let i = 0; i < 4; i++) {
-        const cy = rightYPositions[i];
+    // Рисуем все 5 дуг (смотрят вниз)
+    for (let i = 0; i < 5; i++) {
+        const cy = yPositions[i];
         const isCompleted = completedSubTasks.includes(i);
-        const startAngle = 0;
-        const endAngle = Math.PI;
-        
-        // Фон дуги
-        ctx.strokeStyle = isCompleted ? '#c8e6c9' : '#e0e0e0';
-        ctx.lineWidth = lineWidth;
-        ctx.lineCap = 'round';
-        ctx.beginPath();
-        ctx.arc(rightX, cy, radius, startAngle, endAngle);
-        ctx.stroke();
-        
-        // Целевая траектория
-        ctx.strokeStyle = isCompleted ? '#4caf50' : '#667eea';
-        ctx.lineWidth = 3;
-        ctx.setLineDash(isCompleted ? [] : [10, 5]);
-        ctx.beginPath();
-        ctx.arc(rightX, cy, radius, startAngle, endAngle);
-        ctx.stroke();
-        ctx.setLineDash([]);
-        
-        // Стартовая точка (справа)
-        const startX_point = rightX + Math.cos(startAngle) * radius;
-        const startY_point = cy - Math.sin(startAngle) * radius;
-        if (isCompleted) {
-            ctx.fillStyle = '#4caf50';
-            ctx.beginPath();
-            ctx.arc(startX_point, startY_point, pointSize, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.strokeStyle = 'white';
-            ctx.lineWidth = 3;
-            ctx.lineCap = 'round';
-            ctx.beginPath();
-            ctx.moveTo(startX_point - pointSize * 0.4, startY_point);
-            ctx.lineTo(startX_point - pointSize * 0.1, startY_point + pointSize * 0.3);
-            ctx.lineTo(startX_point + pointSize * 0.4, startY_point - pointSize * 0.3);
-            ctx.stroke();
-        } else {
-            ctx.fillStyle = '#4caf50';
-            ctx.beginPath();
-            ctx.arc(startX_point, startY_point, pointSize, 0, Math.PI * 2);
-            ctx.fill();
-        }
-        
-        // Финишная точка (слева)
-        const endX_point = rightX + Math.cos(endAngle) * radius;
-        const endY_point = cy - Math.sin(endAngle) * radius;
-        if (!isCompleted) {
-            ctx.strokeStyle = '#ff9800';
-            ctx.lineWidth = 3;
-            ctx.beginPath();
-            ctx.arc(endX_point, endY_point, pointSize, 0, Math.PI * 2);
-            ctx.stroke();
-        }
-    }
-    
-    // Рисуем 4 дуги слева (смотрят вниз)
-    for (let i = 0; i < 4; i++) {
-        const cy = leftYPositions[i];
-        const isCompleted = completedSubTasks.includes(i + 4); // Индексы 4-7
         const startAngle = Math.PI;
         const endAngle = Math.PI * 2;
         
@@ -2445,7 +2310,7 @@ function drawPathArcs() {
         ctx.lineWidth = lineWidth;
         ctx.lineCap = 'round';
         ctx.beginPath();
-        ctx.arc(leftX, cy, radius, startAngle, endAngle);
+        ctx.arc(centerX, cy, radius, startAngle, endAngle);
         ctx.stroke();
         
         // Целевая траектория
@@ -2453,12 +2318,12 @@ function drawPathArcs() {
         ctx.lineWidth = 3;
         ctx.setLineDash(isCompleted ? [] : [10, 5]);
         ctx.beginPath();
-        ctx.arc(leftX, cy, radius, startAngle, endAngle);
+        ctx.arc(centerX, cy, radius, startAngle, endAngle);
         ctx.stroke();
         ctx.setLineDash([]);
         
         // Стартовая точка (слева)
-        const startX_point = leftX + Math.cos(startAngle) * radius;
+        const startX_point = centerX + Math.cos(startAngle) * radius;
         const startY_point = cy + Math.sin(startAngle) * radius;
         if (isCompleted) {
             ctx.fillStyle = '#4caf50';
@@ -2481,7 +2346,7 @@ function drawPathArcs() {
         }
         
         // Финишная точка (справа)
-        const endX_point = leftX + Math.cos(endAngle) * radius;
+        const endX_point = centerX + Math.cos(endAngle) * radius;
         const endY_point = cy + Math.sin(endAngle) * radius;
         if (!isCompleted) {
             ctx.strokeStyle = '#ff9800';
