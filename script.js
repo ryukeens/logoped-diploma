@@ -16,7 +16,11 @@ let stats = {
         module1: 0,
         module2: 0,
         module3: 0,
-        module4: 0
+        module4: 0,
+        module5: 0,
+        module6: 0,
+        module7: 0,
+        module8: 0
     }
 };
 
@@ -26,6 +30,9 @@ let userPath = []; // Путь пользователя
 let exitCount = 0; // Количество выходов за границы
 let isOutOfBounds = false; // Флаг выхода за границы
 let finishZone = null; // Зона финиша
+let startZone = null; // Зона старта
+let pathStarted = false; // Флаг начала движения
+let pathWidth = 40; // Ширина дорожки
 
 // Загрузка статистики из localStorage
 function loadStats() {
@@ -124,17 +131,17 @@ function getModuleExercises(moduleNum) {
             { title: 'Проплыви по волнам', type: 'path-wave', instruction: 'Веди пальцем по волнистой линии' },
             { title: 'Закрути улитку', type: 'path-spiral', instruction: 'Веди пальцем по спирали от центра' }
         ],
-        2: [
-            { title: 'Проведи по дорожке', type: 'path', instruction: 'Веди пальцем по дорожке, не выходя за края' },
-            { title: 'Волнистая линия', type: 'wave', instruction: 'Проведи волнистую линию' }
-        ],
         3: [
-            { title: 'Вертикальные палочки', type: 'lines', instruction: 'Нарисуй вертикальные палочки' },
-            { title: 'Обведи овалы', type: 'ovals', instruction: 'Обведи овалы по контуру' }
+            { title: 'Вертикальные палочки', type: 'basic-lines', instruction: 'Нарисуй вертикальные линии по образцу' },
+            { title: 'Обведи овалы', type: 'basic-ovals', instruction: 'Обведи овалы по контуру' },
+            { title: 'Нарисуй круги', type: 'basic-circles', instruction: 'Нарисуй круги в указанных местах' },
+            { title: 'Горизонтальные линии', type: 'basic-horizontal', instruction: 'Проведи горизонтальные линии' },
+            { title: 'Наклонные линии', type: 'basic-diagonal', instruction: 'Проведи наклонные линии' }
         ],
         4: [
-            { title: 'Продолжи узор', type: 'pattern', instruction: 'Продолжи последовательность элементов' },
-            { title: 'Чередование', type: 'alternating', instruction: 'Чередуй короткие и длинные линии' }
+            { title: 'Точка - Черточка', type: 'pattern-dots-dashes', instruction: 'Продолжи ритм: точка, черточка...' },
+            { title: 'Большой - Маленький круг', type: 'pattern-circles', instruction: 'Чередуй большие и маленькие круги' },
+            { title: 'Треугольник - Круг - Квадрат', type: 'pattern-shapes', instruction: 'Продолжи последовательность фигур' }
         ],
         5: [
             { title: 'Повтори узор', type: 'copy', instruction: 'Повтори узор справа' },
@@ -179,6 +186,8 @@ function displayExercise(exercise) {
     exitCount = 0;
     isOutOfBounds = false;
     finishZone = null;
+    startZone = null;
+    pathStarted = false;
     
     if (canvas && ctx) {
         clearCanvas();
@@ -461,11 +470,27 @@ function getPosition(e) {
 // Начало рисования по дорожке
 function startDrawingPath(e) {
     e.preventDefault();
+    
+    const pos = getPosition(e);
+    
+    // Проверяем, начал ли пользователь со стартовой зоны
+    if (startZone && !pathStarted) {
+        const distanceToStart = Math.sqrt(
+            Math.pow(pos.x - startZone.x, 2) + 
+            Math.pow(pos.y - startZone.y, 2)
+        );
+        
+        if (distanceToStart > startZone.radius) {
+            showErrorFeedback('Начни со стартовой точки!');
+            return;
+        }
+    }
+    
     isDrawing = true;
+    pathStarted = true;
     userPath = [];
     exitCount = 0;
     
-    const pos = getPosition(e);
     userPath.push(pos);
     
     ctx.beginPath();
@@ -557,6 +582,15 @@ function completePathExercise() {
     exerciseCompleted = true;
     isDrawing = false;
     
+    // Проверяем точность прохождения пути
+    const pathAccurate = checkPathAccuracy();
+    
+    if (!pathAccurate) {
+        // Упражнение не засчитано
+        showPathFailureFeedback();
+        return;
+    }
+    
     // Рисуем финишную отметку
     drawFinishMark();
     
@@ -576,6 +610,81 @@ function completePathExercise() {
     setTimeout(() => {
         nextExercise();
     }, 2000);
+}
+
+// Проверка точности прохождения пути
+function checkPathAccuracy() {
+    // Проверка 1: Путь должен быть проведен от А до Б
+    if (userPath.length < 10) {
+        return false; // Слишком короткий путь
+    }
+    
+    // Проверка 2: Не более 3 выходов за границы
+    if (exitCount > 3) {
+        return false;
+    }
+    
+    // Проверка 3: Большинство точек должны быть внутри серой зоны (25px от центра)
+    let pointsInBounds = 0;
+    for (let i = 0; i < userPath.length; i++) {
+        const distance = getDistanceToPath(userPath[i]);
+        if (distance <= 25) {
+            pointsInBounds++;
+        }
+    }
+    
+    const accuracy = pointsInBounds / userPath.length;
+    
+    // Требуем минимум 70% точек внутри зоны
+    return accuracy >= 0.7;
+}
+
+// Показ сообщения о неудаче
+function showPathFailureFeedback() {
+    const feedback = document.getElementById('feedback');
+    feedback.textContent = '⚠️ Старайся не покидать дорожку! Попробуй еще раз.';
+    feedback.className = 'feedback error';
+    feedback.classList.remove('hidden');
+    
+    // Показываем кнопку "Попробовать снова"
+    showTryAgainButton();
+}
+
+// Показ кнопки "Попробовать снова"
+function showTryAgainButton() {
+    const controls = document.querySelector('.controls');
+    
+    // Проверяем, есть ли уже кнопка
+    let tryAgainBtn = document.getElementById('try-again-btn');
+    if (!tryAgainBtn) {
+        tryAgainBtn = document.createElement('button');
+        tryAgainBtn.id = 'try-again-btn';
+        tryAgainBtn.className = 'control-btn primary';
+        tryAgainBtn.textContent = '🔄 Попробовать снова';
+        tryAgainBtn.onclick = retryExercise;
+        
+        // Вставляем перед кнопкой "Дальше"
+        const nextBtn = controls.querySelector('.control-btn.primary');
+        if (nextBtn) {
+            controls.insertBefore(tryAgainBtn, nextBtn);
+        } else {
+            controls.appendChild(tryAgainBtn);
+        }
+    }
+}
+
+// Повтор упражнения
+function retryExercise() {
+    // Удаляем кнопку "Попробовать снова"
+    const tryAgainBtn = document.getElementById('try-again-btn');
+    if (tryAgainBtn) {
+        tryAgainBtn.remove();
+    }
+    
+    // Сбрасываем состояние
+    exerciseCompleted = false;
+    displayExercise(currentExercise);
+    startTime = Date.now();
 }
 
 // Рисование финишной отметки
@@ -643,6 +752,34 @@ function drawExerciseTemplate(exercise) {
             break;
         case 'path-spiral':
             drawSpiralPath();
+            break;
+        
+        // Модуль 3: Базовые элементы
+        case 'basic-lines':
+            drawBasicLinesTemplate();
+            break;
+        case 'basic-ovals':
+            drawBasicOvalsTemplate();
+            break;
+        case 'basic-circles':
+            drawBasicCirclesTemplate();
+            break;
+        case 'basic-horizontal':
+            drawBasicHorizontalTemplate();
+            break;
+        case 'basic-diagonal':
+            drawBasicDiagonalTemplate();
+            break;
+        
+        // Модуль 4: Серийность
+        case 'pattern-dots-dashes':
+            drawPatternDotsDashes();
+            break;
+        case 'pattern-circles':
+            drawPatternCircles();
+            break;
+        case 'pattern-shapes':
+            drawPatternShapes();
             break;
         
         // Другие модули
@@ -873,13 +1010,23 @@ function drawStraightPath() {
         pathPoints.push({ x: x, y: y });
     }
     
-    // Фон дорожки (широкая серая линия)
-    ctx.strokeStyle = '#e0e0e0';
-    ctx.lineWidth = 40;
+    // Серая зона (полупрозрачная дорожка)
+    ctx.strokeStyle = 'rgba(224, 224, 224, 0.5)';
+    ctx.lineWidth = 50;
     ctx.lineCap = 'round';
     ctx.beginPath();
     ctx.moveTo(startX, y);
     ctx.lineTo(endX, y);
+    ctx.stroke();
+    
+    // Границы дорожки
+    ctx.strokeStyle = '#d0d0d0';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(startX, y - 25);
+    ctx.lineTo(endX, y - 25);
+    ctx.moveTo(startX, y + 25);
+    ctx.lineTo(endX, y + 25);
     ctx.stroke();
     
     // Целевая траектория (пунктир)
@@ -893,6 +1040,7 @@ function drawStraightPath() {
     ctx.setLineDash([]);
     
     // Стартовая точка
+    startZone = { x: startX, y: y, radius: 15 };
     ctx.fillStyle = '#4caf50';
     ctx.beginPath();
     ctx.arc(startX, y, 12, 0, Math.PI * 2);
@@ -918,13 +1066,23 @@ function drawVerticalPath() {
         pathPoints.push({ x: x, y: y });
     }
     
-    // Фон дорожки
-    ctx.strokeStyle = '#e0e0e0';
-    ctx.lineWidth = 40;
+    // Серая зона (полупрозрачная дорожка)
+    ctx.strokeStyle = 'rgba(224, 224, 224, 0.5)';
+    ctx.lineWidth = 50;
     ctx.lineCap = 'round';
     ctx.beginPath();
     ctx.moveTo(x, startY);
     ctx.lineTo(x, endY);
+    ctx.stroke();
+    
+    // Границы дорожки
+    ctx.strokeStyle = '#d0d0d0';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x - 25, startY);
+    ctx.lineTo(x - 25, endY);
+    ctx.moveTo(x + 25, startY);
+    ctx.lineTo(x + 25, endY);
     ctx.stroke();
     
     // Целевая траектория
@@ -938,6 +1096,7 @@ function drawVerticalPath() {
     ctx.setLineDash([]);
     
     // Стартовая точка
+    startZone = { x: x, y: startY, radius: 15 };
     ctx.fillStyle = '#4caf50';
     ctx.beginPath();
     ctx.arc(x, startY, 12, 0, Math.PI * 2);
@@ -963,9 +1122,9 @@ function drawZigzagPath() {
     
     pathPoints = [];
     
-    // Рисуем фон дорожки
-    ctx.strokeStyle = '#e0e0e0';
-    ctx.lineWidth = 40;
+    // Серая зона (полупрозрачная дорожка)
+    ctx.strokeStyle = 'rgba(224, 224, 224, 0.5)';
+    ctx.lineWidth = 50;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     ctx.beginPath();
@@ -1007,6 +1166,7 @@ function drawZigzagPath() {
     ctx.setLineDash([]);
     
     // Стартовая точка
+    startZone = { x: startX, y: centerY, radius: 15 };
     ctx.fillStyle = '#4caf50';
     ctx.beginPath();
     ctx.arc(startX, centerY, 12, 0, Math.PI * 2);
@@ -1032,9 +1192,9 @@ function drawWavePath() {
     
     pathPoints = [];
     
-    // Фон дорожки
-    ctx.strokeStyle = '#e0e0e0';
-    ctx.lineWidth = 40;
+    // Серая зона (полупрозрачная дорожка)
+    ctx.strokeStyle = 'rgba(224, 224, 224, 0.5)';
+    ctx.lineWidth = 50;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     ctx.beginPath();
@@ -1061,6 +1221,7 @@ function drawWavePath() {
     ctx.setLineDash([]);
     
     // Стартовая точка
+    startZone = { x: startX, y: centerY, radius: 15 };
     ctx.fillStyle = '#4caf50';
     ctx.beginPath();
     ctx.arc(startX, centerY, 12, 0, Math.PI * 2);
@@ -1086,9 +1247,9 @@ function drawSpiralPath() {
     
     pathPoints = [];
     
-    // Фон дорожки
-    ctx.strokeStyle = '#e0e0e0';
-    ctx.lineWidth = 40;
+    // Серая зона (полупрозрачная дорожка)
+    ctx.strokeStyle = 'rgba(224, 224, 224, 0.5)';
+    ctx.lineWidth = 50;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     ctx.beginPath();
@@ -1134,6 +1295,7 @@ function drawSpiralPath() {
     ctx.setLineDash([]);
     
     // Стартовая точка (центр)
+    startZone = { x: centerX, y: centerY, radius: 15 };
     ctx.fillStyle = '#4caf50';
     ctx.beginPath();
     ctx.arc(centerX, centerY, 12, 0, Math.PI * 2);
@@ -1148,6 +1310,291 @@ function drawSpiralPath() {
     ctx.lineWidth = 3;
     ctx.beginPath();
     ctx.arc(finalX, finalY, 15, 0, Math.PI * 2);
+    ctx.stroke();
+}
+
+// ============================================
+// МОДУЛЬ 3: БАЗОВЫЕ ЭЛЕМЕНТЫ
+// ============================================
+
+function drawBasicLinesTemplate() {
+    ctx.strokeStyle = '#e0e0e0';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([5, 5]);
+    
+    // Образец (первые 2 линии)
+    ctx.strokeStyle = '#667eea';
+    ctx.lineWidth = 3;
+    ctx.setLineDash([]);
+    for (let i = 0; i < 2; i++) {
+        const x = 80 + i * 80;
+        ctx.beginPath();
+        ctx.moveTo(x, 100);
+        ctx.lineTo(x, 200);
+        ctx.stroke();
+    }
+    
+    // Пунктирные направляющие для остальных
+    ctx.strokeStyle = '#e0e0e0';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([5, 5]);
+    for (let i = 2; i < 5; i++) {
+        const x = 80 + i * 80;
+        ctx.beginPath();
+        ctx.moveTo(x, 100);
+        ctx.lineTo(x, 200);
+        ctx.stroke();
+    }
+    ctx.setLineDash([]);
+}
+
+function drawBasicOvalsTemplate() {
+    // Образец (первый овал)
+    ctx.strokeStyle = '#667eea';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.ellipse(100, canvas.height / 2, 30, 50, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    
+    // Пунктирные овалы для обводки
+    ctx.strokeStyle = '#e0e0e0';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([5, 5]);
+    for (let i = 1; i < 4; i++) {
+        const x = 100 + i * 120;
+        ctx.beginPath();
+        ctx.ellipse(x, canvas.height / 2, 30, 50, 0, 0, Math.PI * 2);
+        ctx.stroke();
+    }
+    ctx.setLineDash([]);
+}
+
+function drawBasicCirclesTemplate() {
+    // Показываем места для кругов
+    const positions = [
+        { x: canvas.width * 0.25, y: canvas.height * 0.3 },
+        { x: canvas.width * 0.75, y: canvas.height * 0.3 },
+        { x: canvas.width * 0.25, y: canvas.height * 0.7 },
+        { x: canvas.width * 0.75, y: canvas.height * 0.7 }
+    ];
+    
+    ctx.strokeStyle = '#e0e0e0';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([5, 5]);
+    
+    positions.forEach(pos => {
+        ctx.beginPath();
+        ctx.arc(pos.x, pos.y, 40, 0, Math.PI * 2);
+        ctx.stroke();
+    });
+    ctx.setLineDash([]);
+}
+
+function drawBasicHorizontalTemplate() {
+    ctx.strokeStyle = '#e0e0e0';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([5, 5]);
+    
+    // Образец (первые 2 линии)
+    ctx.strokeStyle = '#667eea';
+    ctx.lineWidth = 3;
+    ctx.setLineDash([]);
+    for (let i = 0; i < 2; i++) {
+        const y = 100 + i * 60;
+        ctx.beginPath();
+        ctx.moveTo(80, y);
+        ctx.lineTo(canvas.width - 80, y);
+        ctx.stroke();
+    }
+    
+    // Пунктирные направляющие
+    ctx.strokeStyle = '#e0e0e0';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([5, 5]);
+    for (let i = 2; i < 5; i++) {
+        const y = 100 + i * 60;
+        ctx.beginPath();
+        ctx.moveTo(80, y);
+        ctx.lineTo(canvas.width - 80, y);
+        ctx.stroke();
+    }
+    ctx.setLineDash([]);
+}
+
+function drawBasicDiagonalTemplate() {
+    // Образец (первые 2 линии)
+    ctx.strokeStyle = '#667eea';
+    ctx.lineWidth = 3;
+    for (let i = 0; i < 2; i++) {
+        const x = 80 + i * 80;
+        ctx.beginPath();
+        ctx.moveTo(x, 100);
+        ctx.lineTo(x + 60, 200);
+        ctx.stroke();
+    }
+    
+    // Пунктирные направляющие
+    ctx.strokeStyle = '#e0e0e0';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([5, 5]);
+    for (let i = 2; i < 5; i++) {
+        const x = 80 + i * 80;
+        ctx.beginPath();
+        ctx.moveTo(x, 100);
+        ctx.lineTo(x + 60, 200);
+        ctx.stroke();
+    }
+    ctx.setLineDash([]);
+}
+
+// ============================================
+// МОДУЛЬ 4: СЕРИЙНОСТЬ И ДИНАМИЧЕСКИЙ ПРАКСИС
+// ============================================
+
+// Переменные для модуля 4
+let patternSequence = []; // Последовательность элементов паттерна
+let userSequence = []; // Последовательность пользователя
+let currentPatternIndex = 0; // Текущий индекс в паттерне
+let targetZones = []; // Зоны для размещения элементов
+
+function drawPatternDotsDashes() {
+    patternSequence = ['dot', 'dash', 'dot', 'dash', 'dot', 'dash'];
+    userSequence = [];
+    currentPatternIndex = 0;
+    targetZones = [];
+    
+    const startX = 60;
+    const spacing = 80;
+    const y = canvas.height / 2;
+    
+    // Рисуем образец (первые 3 элемента)
+    ctx.strokeStyle = '#667eea';
+    ctx.fillStyle = '#667eea';
+    ctx.lineWidth = 3;
+    
+    for (let i = 0; i < 3; i++) {
+        const x = startX + i * spacing;
+        if (patternSequence[i] === 'dot') {
+            ctx.beginPath();
+            ctx.arc(x, y, 8, 0, Math.PI * 2);
+            ctx.fill();
+        } else {
+            ctx.beginPath();
+            ctx.moveTo(x - 15, y);
+            ctx.lineTo(x + 15, y);
+            ctx.stroke();
+        }
+    }
+    
+    // Подсветка целевой зоны для следующего элемента
+    const nextX = startX + 3 * spacing;
+    ctx.strokeStyle = '#ff9800';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([5, 5]);
+    ctx.strokeRect(nextX - 25, y - 25, 50, 50);
+    ctx.setLineDash([]);
+    
+    // Сохраняем целевые зоны
+    for (let i = 3; i < patternSequence.length; i++) {
+        const x = startX + i * spacing;
+        targetZones.push({ x: x, y: y, type: patternSequence[i] });
+    }
+    
+    // Инструкция
+    ctx.fillStyle = '#333';
+    ctx.font = '14px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('Продолжи ритм: точка, черточка...', canvas.width / 2, 50);
+}
+
+function drawPatternCircles() {
+    patternSequence = ['big', 'small', 'big', 'small', 'big', 'small'];
+    userSequence = [];
+    currentPatternIndex = 0;
+    targetZones = [];
+    
+    const startX = 80;
+    const spacing = 100;
+    const y = canvas.height / 2;
+    
+    // Рисуем образец (первые 2 элемента)
+    ctx.strokeStyle = '#667eea';
+    ctx.lineWidth = 3;
+    
+    for (let i = 0; i < 2; i++) {
+        const x = startX + i * spacing;
+        const radius = patternSequence[i] === 'big' ? 30 : 15;
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.stroke();
+    }
+    
+    // Подсветка целевой зоны
+    const nextX = startX + 2 * spacing;
+    ctx.strokeStyle = '#ff9800';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([5, 5]);
+    ctx.strokeRect(nextX - 40, y - 40, 80, 80);
+    ctx.setLineDash([]);
+    
+    // Сохраняем целевые зоны
+    for (let i = 2; i < patternSequence.length; i++) {
+        const x = startX + i * spacing;
+        targetZones.push({ x: x, y: y, type: patternSequence[i] });
+    }
+}
+
+function drawPatternShapes() {
+    patternSequence = ['triangle', 'circle', 'square', 'triangle', 'circle', 'square'];
+    userSequence = [];
+    currentPatternIndex = 0;
+    targetZones = [];
+    
+    const startX = 70;
+    const spacing = 90;
+    const y = canvas.height / 2;
+    
+    // Рисуем образец (первые 3 элемента)
+    ctx.strokeStyle = '#667eea';
+    ctx.lineWidth = 3;
+    
+    for (let i = 0; i < 3; i++) {
+        const x = startX + i * spacing;
+        drawShape(x, y, patternSequence[i], 25);
+    }
+    
+    // Подсветка целевой зоны
+    const nextX = startX + 3 * spacing;
+    ctx.strokeStyle = '#ff9800';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([5, 5]);
+    ctx.strokeRect(nextX - 35, y - 35, 70, 70);
+    ctx.setLineDash([]);
+    
+    // Сохраняем целевые зоны
+    for (let i = 3; i < patternSequence.length; i++) {
+        const x = startX + i * spacing;
+        targetZones.push({ x: x, y: y, type: patternSequence[i] });
+    }
+}
+
+// Вспомогательная функция для рисования фигур
+function drawShape(x, y, type, size) {
+    ctx.beginPath();
+    switch(type) {
+        case 'triangle':
+            ctx.moveTo(x, y - size);
+            ctx.lineTo(x - size, y + size);
+            ctx.lineTo(x + size, y + size);
+            ctx.closePath();
+            break;
+        case 'circle':
+            ctx.arc(x, y, size, 0, Math.PI * 2);
+            break;
+        case 'square':
+            ctx.rect(x - size, y - size, size * 2, size * 2);
+            break;
+    }
     ctx.stroke();
 }
 
@@ -1329,6 +1776,12 @@ function showHint() {
 }
 
 function nextExercise() {
+    // Удаляем кнопку "Попробовать снова" если она есть
+    const tryAgainBtn = document.getElementById('try-again-btn');
+    if (tryAgainBtn) {
+        tryAgainBtn.remove();
+    }
+    
     if (exerciseCompleted) {
         // Сохранение результата
         const timeSpent = Math.floor((Date.now() - startTime) / 1000);
@@ -1372,6 +1825,12 @@ function showModuleCompleteFeedback() {
 }
 
 function exitExercise() {
+    // Удаляем кнопку "Попробовать снова" если она есть
+    const tryAgainBtn = document.getElementById('try-again-btn');
+    if (tryAgainBtn) {
+        tryAgainBtn.remove();
+    }
+    
     showMainMenu();
 }
 
@@ -1444,4 +1903,6 @@ function updateModuleStats() {
     
     document.getElementById('module1-count').textContent = moduleStats.module1 || 0;
     document.getElementById('module2-count').textContent = moduleStats.module2 || 0;
+    document.getElementById('module3-count').textContent = moduleStats.module3 || 0;
+    document.getElementById('module4-count').textContent = moduleStats.module4 || 0;
 }

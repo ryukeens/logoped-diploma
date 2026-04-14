@@ -119,13 +119,28 @@ header h1 {
 }
 
 #exercises-menu {
-    padding: 0 20px 30px;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+}
+
+#exercises-menu .back-btn {
+    flex-shrink: 0;
 }
 
 #exercises-menu h2 {
     text-align: center;
     color: #333;
-    margin-bottom: 20px;
+    margin: 20px 20px 15px 20px;
+    flex-shrink: 0;
+}
+
+#exercises-menu .modules-grid {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 0 20px 30px 20px;
+    flex: 1;
 }
 
 .modules-grid {
@@ -285,16 +300,31 @@ header h1 {
 }
 
 #results-screen, #info-screen {
-    padding: 0 20px 30px;
-    overflow-y: auto;
-    flex: 1;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+}
+
+#results-screen .back-btn,
+#info-screen .back-btn {
+    flex-shrink: 0;
 }
 
 #results-screen h2, #info-screen h2 {
     text-align: center;
     color: #333;
-    margin-bottom: 20px;
+    margin: 20px 20px 15px 20px;
     font-size: 22px;
+    flex-shrink: 0;
+}
+
+.scrollable-content {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 0 20px 30px 20px;
+    flex: 1;
+    min-height: 0;
 }
 
 .stats-container {
@@ -669,10 +699,21 @@ header h1 {
         padding: 10px 15px;
         font-size: 14px;
         margin: 15px;
+        flex-shrink: 0;
     }
     
-    #results-screen, #info-screen {
-        padding: 0 15px 20px;
+    .scrollable-content {
+        padding: 0 15px 20px 15px;
+    }
+    
+    #exercises-menu .modules-grid {
+        padding: 0 15px 20px 15px;
+    }
+    
+    #exercises-menu h2,
+    #results-screen h2,
+    #info-screen h2 {
+        margin: 15px 15px 10px 15px;
     }
     
     .info-content {
