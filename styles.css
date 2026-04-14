@@ -8,37 +8,38 @@
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    height: 100dvh; /* Dynamic Viewport Height для мобильных */
+    min-height: 100dvh; /* Dynamic Viewport Height для мобильных */
     display: flex;
     justify-content: center;
     align-items: center;
     padding: 20px;
     touch-action: manipulation;
-    overflow: hidden; /* Предотвращаем скролл */
+    overflow-x: hidden; /* Предотвращаем горизонтальный скролл */
+    overflow-y: auto; /* Разрешаем вертикальный скролл */
 }
 
-@supports not (height: 100dvh) {
+@supports not (min-height: 100dvh) {
     body {
-        height: 100vh; /* Fallback для старых браузеров */
+        min-height: 100vh; /* Fallback для старых браузеров */
     }
 }
 
 .container {
     width: 100%;
     max-width: 600px;
-    height: 100%;
-    max-height: 100dvh;
+    min-height: 100dvh;
     background: white;
     border-radius: 20px;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
     overflow: hidden;
     display: flex;
     flex-direction: column;
+    position: relative;
 }
 
-@supports not (max-height: 100dvh) {
+@supports not (min-height: 100dvh) {
     .container {
-        max-height: 100vh; /* Fallback */
+        min-height: 100vh; /* Fallback */
     }
 }
 
@@ -67,6 +68,7 @@ header h1 {
     gap: 12px;
     overflow-y: auto; /* Скролл если нужно */
     flex: 1;
+    height: auto; /* Автоматическая высота */
 }
 
 .menu-btn {
@@ -120,6 +122,7 @@ header h1 {
 
 #exercises-menu {
     padding: 0 20px 30px;
+    height: auto; /* Автоматическая высота */
 }
 
 #exercises-menu h2 {
@@ -178,6 +181,7 @@ header h1 {
     flex-direction: column;
     height: 100%;
     overflow: hidden;
+    padding-bottom: 68px; /* Отступ для фиксированных кнопок */
 }
 
 .exercise-header {
@@ -231,6 +235,12 @@ header h1 {
     padding: 12px;
     background: #f5f5f5;
     flex-shrink: 0;
+    position: absolute;
+    bottom: 8px;
+    left: 0;
+    right: 0;
+    z-index: 10;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
 }
 
 .control-btn {
@@ -286,6 +296,8 @@ header h1 {
 
 #results-screen, #info-screen {
     padding: 0 20px 30px;
+    height: auto; /* Автоматическая высота */
+    overflow-y: auto; /* Скролл если нужно */
 }
 
 #results-screen h2, #info-screen h2 {
@@ -447,6 +459,10 @@ header h1 {
         min-height: 44px;
     }
     
+    #exercise-screen {
+        padding-bottom: 66px; /* Отступ для фиксированных кнопок на мобильных */
+    }
+    
     .feedback {
         padding: 10px;
         font-size: 14px;
@@ -480,5 +496,9 @@ header h1 {
     .instruction {
         font-size: 13px;
         padding: 10px;
+    }
+    
+    #exercise-screen {
+        padding-bottom: 60px; /* Отступ для фиксированных кнопок на очень маленьких экранах */
     }
 }

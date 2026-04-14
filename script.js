@@ -49,22 +49,30 @@ document.addEventListener('DOMContentLoaded', () => {
 function showMainMenu() {
     hideAllScreens();
     document.querySelector('.main-menu').classList.remove('hidden');
+    // Разрешаем скролл в меню
+    document.body.style.overflow = 'auto';
 }
 
 function showExercises() {
     hideAllScreens();
     document.getElementById('exercises-menu').classList.remove('hidden');
+    // Разрешаем скролл в меню выбора упражнений
+    document.body.style.overflow = 'auto';
 }
 
 function showResults() {
     hideAllScreens();
     document.getElementById('results-screen').classList.remove('hidden');
     updateResultsDisplay();
+    // Разрешаем скролл на экране результатов
+    document.body.style.overflow = 'auto';
 }
 
 function showInfo() {
     hideAllScreens();
     document.getElementById('info-screen').classList.remove('hidden');
+    // Разрешаем скролл на экране информации
+    document.body.style.overflow = 'auto';
 }
 
 function hideAllScreens() {
@@ -179,6 +187,8 @@ function nextExercise() {
 // Выход из упражнения
 function exitExercise() {
     showExercises();
+    // Разрешаем скролл при выходе из упражнения
+    document.body.style.overflow = 'auto';
 }
 
 // Обновление отображения результатов
@@ -213,6 +223,9 @@ function displayExercise(exercise) {
     }
     
     console.log('Displaying exercise:', exercise.title, exercise.type);
+    
+    // Блокируем скролл во время выполнения упражнения
+    document.body.style.overflow = 'hidden';
     
     document.getElementById('exercise-title').textContent = exercise.title;
     document.getElementById('instruction').textContent = exercise.instruction;
@@ -300,7 +313,23 @@ function resizeCanvas() {
 function clearCanvas() {
     if (ctx) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
+        // Перерисовываем шаблон после очистки
+        if (currentExercise) {
+            drawExerciseTemplate(currentExercise);
+        }
     }
+}
+
+// Показать подсказку
+function showHint() {
+    const feedback = document.getElementById('feedback');
+    feedback.textContent = '💡 Веди пальцем медленно и аккуратно по пунктирной линии';
+    feedback.className = 'feedback';
+    feedback.classList.remove('hidden');
+    
+    setTimeout(() => {
+        feedback.classList.add('hidden');
+    }, 3000);
 }
 
 // Обработка касания/клика на canvas
