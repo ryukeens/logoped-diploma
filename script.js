@@ -128,7 +128,7 @@ function getModuleExercises(moduleNum) {
             { title: 'Наклонные линии', type: 'path-diagonal', instruction: 'Обведи все наклонные линии', subTasks: 8 },
             { title: 'Круги', type: 'path-circles', instruction: 'Обведи все круги по контуру', subTasks: 5 },
             { title: 'Дуги', type: 'path-arcs', instruction: 'Обведи все дуги плавным движением', subTasks: 8 },
-            { title: 'Пружинка', type: 'path-loops', instruction: 'Обведи пружинку слева направо', subTasks: 3 }
+            { title: 'Пружинка', type: 'path-loops', instruction: 'Обведи волнистые линии слева направо', subTasks: 3 }
         ],
         4: [
             { title: 'Продолжи узор', type: 'pattern', instruction: 'Продолжи последовательность элементов' },
@@ -600,24 +600,24 @@ function startDrawingPath(e) {
                 }
             }
         } else if (currentExercise.type === 'path-loops') {
-            // Пружинка (горизонтальная спираль)
-            const spiralSpacing = 180;
-            const spiralWidth = 140;
-            const spiralHeight = 80;
-            const coilsPerSpiral = 4;
-            const startX = 60;
+            // Пружинка (упрощенная волнистая линия для мобильных)
+            const waveSpacing = 180;
+            const waveWidth = 160;
+            const waveHeight = 50;
+            const wavesPerLine = 2.5;
+            const startX = 50;
             const centerY = canvas.height / 2;
             
             for (let i = 0; i < totalSubTasks; i++) {
                 if (!completedSubTasks.includes(i)) {
-                    const spiralStartX = startX + i * spiralSpacing;
-                    const startY = centerY; // Начинаем по центру
+                    const waveStartX = startX + i * waveSpacing;
+                    const startY = centerY;
                     const distance = Math.sqrt(
-                        Math.pow(pos.x - spiralStartX, 2) + 
+                        Math.pow(pos.x - waveStartX, 2) + 
                         Math.pow(pos.y - startY, 2)
                     );
                     
-                    if (distance <= 30) {
+                    if (distance <= 40) { // Увеличенная зона старта для мобильных
                         nearStart = true;
                         break;
                     }
@@ -669,8 +669,20 @@ function drawPathWithCheck(pos) {
         return;
     }
     
-    // Проверка выхода за границы (20px от центра - это граница серой зоны)
-    if (distanceToPath > 20) {
+    // Проверка выхода за границы - увеличенная зона допуска для мобильных устройств
+    let boundaryTolerance = 20; // По умолчанию
+    
+    // Для упражнения "Пружинка" делаем более мягкие границы
+    if (currentExercise && currentExercise.type === 'path-loops') {
+        boundaryTolerance = 30; // Увеличенная зона допуска для волнистых линий
+    }
+    
+    // Для упражнения "Спираль" (улитка) делаем еще более мягкие границы
+    if (currentExercise && currentExercise.type === 'path-spiral') {
+        boundaryTolerance = 30; // Увеличенная зона допуска для спирали
+    }
+    
+    if (distanceToPath > boundaryTolerance) {
         // Вышли за границы - немедленно прерываем рисование
         if (!isOutOfBounds) {
             isOutOfBounds = true;
@@ -855,29 +867,29 @@ function drawPathWithCheck(pos) {
                 }
             }
         } else if (currentExercise.type === 'path-loops') {
-            // Пружинка (горизонтальная спираль)
-            const spiralSpacing = 180;
-            const spiralWidth = 140;
-            const spiralHeight = 80;
-            const coilsPerSpiral = 4;
-            const startX = 60;
+            // Пружинка (упрощенная волнистая линия для мобильных)
+            const waveSpacing = 180;
+            const waveWidth = 160;
+            const waveHeight = 50;
+            const wavesPerLine = 2.5;
+            const startX = 50;
             const centerY = canvas.height / 2;
             
             for (let i = 0; i < totalSubTasks; i++) {
                 if (!completedSubTasks.includes(i)) {
-                    const spiralStartX = startX + i * spiralSpacing;
-                    const spiralEndX = spiralStartX + spiralWidth;
+                    const waveStartX = startX + i * waveSpacing;
+                    const waveEndX = waveStartX + waveWidth;
                     
-                    // Финишная точка (справа, в конце последнего витка)
-                    const finalAngle = coilsPerSpiral * Math.PI * 2;
-                    const endY = centerY + Math.sin(finalAngle) * spiralHeight / 2;
+                    // Финишная точка (справа)
+                    const finalAngle = wavesPerLine * Math.PI * 2;
+                    const endY = centerY + Math.sin(finalAngle) * waveHeight / 2;
                     
                     const distanceToFinish = Math.sqrt(
-                        Math.pow(pos.x - spiralEndX, 2) + 
+                        Math.pow(pos.x - waveEndX, 2) + 
                         Math.pow(pos.y - endY, 2)
                     );
                     
-                    if (distanceToFinish <= 30) {
+                    if (distanceToFinish <= 40) { // Увеличенная зона финиша для мобильных
                         completePathExercise();
                         return;
                     }
@@ -937,8 +949,15 @@ function checkPathFinish() {
 function completePathExercise() {
     if (exerciseCompleted) return;
     
-    // СТРОГАЯ ПРОВЕРКА: переход только при идеальном прохождении (0 ошибок)
-    if (exitCount === 0) {
+    // ПРОВЕРКА ПРОХОЖДЕНИЯ: для спирали разрешаем несколько ошибок, для остальных - строго
+    let allowedErrors = 0; // По умолчанию строгая проверка
+    
+    // Для упражнения "Спираль" (улитка) разрешаем до 3 выходов за границы
+    if (currentExercise && currentExercise.type === 'path-spiral') {
+        allowedErrors = 3;
+    }
+    
+    if (exitCount <= allowedErrors) {
         // Для упражнений с несколькими линиями - определяем, какую линию завершили
         if (totalSubTasks > 0) {
             // Определяем, на какой линии пользователь закончил
@@ -1075,29 +1094,29 @@ function completePathExercise() {
                     }
                 }
             } else if (currentExercise.type === 'path-loops') {
-                // Пружинка (горизонтальная спираль)
-                const spiralSpacing = 180;
-                const spiralWidth = 140;
-                const spiralHeight = 80;
-                const coilsPerSpiral = 4;
-                const startX = 60;
+                // Пружинка (упрощенная волнистая линия для мобильных)
+                const waveSpacing = 180;
+                const waveWidth = 160;
+                const waveHeight = 50;
+                const wavesPerLine = 2.5;
+                const startX = 50;
                 const centerY = canvas.height / 2;
                 
                 for (let i = 0; i < totalSubTasks; i++) {
                     if (!completedSubTasks.includes(i)) {
-                        const spiralStartX = startX + i * spiralSpacing;
-                        const spiralEndX = spiralStartX + spiralWidth;
+                        const waveStartX = startX + i * waveSpacing;
+                        const waveEndX = waveStartX + waveWidth;
                         
-                        // Финишная точка (справа, в конце последнего витка)
-                        const finalAngle = coilsPerSpiral * Math.PI * 2;
-                        const endY = centerY + Math.sin(finalAngle) * spiralHeight / 2;
+                        // Финишная точка (справа)
+                        const finalAngle = wavesPerLine * Math.PI * 2;
+                        const endY = centerY + Math.sin(finalAngle) * waveHeight / 2;
                         
                         const distance = Math.sqrt(
-                            Math.pow(lastPoint.x - spiralEndX, 2) + 
+                            Math.pow(lastPoint.x - waveEndX, 2) + 
                             Math.pow(lastPoint.y - endY, 2)
                         );
                         
-                        if (distance < minDistance && distance <= 30) {
+                        if (distance < minDistance && distance <= 40) { // Увеличенная зона для мобильных
                             minDistance = distance;
                             completedLine = i;
                         }
@@ -1151,7 +1170,18 @@ function completePathExercise() {
             drawFinishMark();
             
             const feedback = document.getElementById('feedback');
-            feedback.textContent = '🎉 Идеально! Переход к следующему уровню!';
+            
+            // Специальное сообщение для спирали с учетом допустимых ошибок
+            if (currentExercise && currentExercise.type === 'path-spiral') {
+                if (exitCount === 0) {
+                    feedback.textContent = '🎉 Идеально! Переход к следующему уровню!';
+                } else {
+                    feedback.textContent = `✅ Отлично! ${exitCount} касаний границ (до 3 разрешено)`;
+                }
+            } else {
+                feedback.textContent = '🎉 Идеально! Переход к следующему уровню!';
+            }
+            
             feedback.className = 'feedback';
             feedback.classList.remove('hidden');
             
@@ -1164,7 +1194,14 @@ function completePathExercise() {
         isDrawing = false;
         
         const feedback = document.getElementById('feedback');
-        feedback.textContent = '⚠️ Были выходы за границы. Попробуй еще раз!';
+        
+        // Специальное сообщение об ошибке для спирали
+        if (currentExercise && currentExercise.type === 'path-spiral') {
+            feedback.textContent = `⚠️ Слишком много касаний границ (${exitCount}/3). Попробуй аккуратнее!`;
+        } else {
+            feedback.textContent = '⚠️ Были выходы за границы. Попробуй еще раз!';
+        }
+        
         feedback.className = 'feedback error';
         feedback.classList.remove('hidden');
         
@@ -1716,19 +1753,19 @@ function drawWavePath() {
     ctx.stroke();
 }
 
-// Спираль (улитка)
+// Спираль (улитка) - увеличенная версия для мобильных устройств
 function drawSpiralPath() {
     const centerX = canvas.width / 2;
     const centerY = canvas.height / 2;
-    const maxRadius = Math.min(canvas.width, canvas.height) / 2 - 60;
+    const maxRadius = Math.min(canvas.width, canvas.height) / 2 - 40; // Увеличенный радиус (было -60)
     const turns = 3;
     const points = 200;
     
     pathPoints = [];
     
-    // Фон дорожки
+    // Фон дорожки (увеличенная толщина для мобильных)
     ctx.strokeStyle = '#e0e0e0';
-    ctx.lineWidth = 40;
+    ctx.lineWidth = 60; // Увеличено с 40 до 60
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     ctx.beginPath();
@@ -1752,10 +1789,10 @@ function drawSpiralPath() {
     }
     ctx.stroke();
     
-    // Целевая траектория
+    // Целевая траектория (более заметная)
     ctx.strokeStyle = '#667eea';
-    ctx.lineWidth = 2;
-    ctx.setLineDash([10, 5]);
+    ctx.lineWidth = 4; // Увеличено с 2 до 4
+    ctx.setLineDash([15, 8]); // Более крупный пунктир
     ctx.beginPath();
     for (let i = 0; i <= points; i++) {
         const t = i / points;
@@ -1773,21 +1810,21 @@ function drawSpiralPath() {
     ctx.stroke();
     ctx.setLineDash([]);
     
-    // Стартовая точка (центр)
+    // Стартовая точка (центр) - увеличенная
     ctx.fillStyle = '#4caf50';
     ctx.beginPath();
-    ctx.arc(centerX, centerY, 12, 0, Math.PI * 2);
+    ctx.arc(centerX, centerY, 18, 0, Math.PI * 2); // Увеличено с 12 до 18
     ctx.fill();
     
-    // Финишная зона (конец спирали)
+    // Финишная зона (конец спирали) - увеличенная
     const finalAngle = turns * Math.PI * 2;
     const finalX = centerX + Math.cos(finalAngle) * maxRadius;
     const finalY = centerY + Math.sin(finalAngle) * maxRadius;
-    finishZone = { x: finalX, y: finalY, radius: 30 };
+    finishZone = { x: finalX, y: finalY, radius: 40 }; // Увеличено с 30 до 40
     ctx.strokeStyle = '#ff9800';
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 4; // Увеличено с 3 до 4
     ctx.beginPath();
-    ctx.arc(finalX, finalY, 15, 0, Math.PI * 2);
+    ctx.arc(finalX, finalY, 20, 0, Math.PI * 2); // Увеличено с 15 до 20
     ctx.stroke();
 }
 
@@ -2401,58 +2438,58 @@ function drawPathArcs() {
     }
 }
 
-// Пружинка - горизонтальная спираль с 4-5 витками (все активны одновременно)
+// Пружинка - упрощенная волнистая линия для мобильных устройств (все активны одновременно)
 function drawPathLoops() {
-    const spiralCount = 3; // Количество пружинок (уменьшено до 3)
-    const spiralSpacing = 180; // Увеличенное расстояние между пружинками
-    const spiralWidth = 140; // Увеличенная ширина одной пружинки
-    const spiralHeight = 80; // Увеличенная высота витков
-    const coilsPerSpiral = 4; // Количество витков в каждой пружинке
-    const startX = 60; // Сдвинуто левее для лучшего размещения
+    const waveCount = 3; // Количество волнистых линий
+    const waveSpacing = 180; // Расстояние между линиями
+    const waveWidth = 160; // Ширина одной волнистой линии
+    const waveHeight = 50; // Уменьшенная высота волн для простоты
+    const wavesPerLine = 2.5; // Меньше волн для упрощения
+    const startX = 50;
     const centerY = canvas.height / 2;
     
     pathPoints = [];
     
-    // Генерируем точки траектории для ВСЕХ пружинок сразу
-    for (let i = 0; i < spiralCount; i++) {
-        const spiralStartX = startX + i * spiralSpacing;
+    // Генерируем точки траектории для ВСЕХ волнистых линий сразу
+    for (let i = 0; i < waveCount; i++) {
+        const waveStartX = startX + i * waveSpacing;
         
-        // Генерируем точки траектории пружинки (горизонтальная спираль)
-        const totalSteps = 200; // Больше точек для плавной кривой
+        // Генерируем точки траектории волнистой линии (более плавные изгибы)
+        const totalSteps = 150; // Меньше точек, но достаточно для плавности
         for (let j = 0; j <= totalSteps; j++) {
             const t = j / totalSteps;
             
             // Горизонтальное движение слева направо
-            const px = spiralStartX + t * spiralWidth;
+            const px = waveStartX + t * waveWidth;
             
-            // Вертикальные колебания (синусоида с увеличивающейся частотой)
-            const angle = t * coilsPerSpiral * Math.PI * 2;
-            const py = centerY + Math.sin(angle) * spiralHeight / 2;
+            // Плавные волны (синусоида с меньшей частотой)
+            const angle = t * wavesPerLine * Math.PI * 2;
+            const py = centerY + Math.sin(angle) * waveHeight / 2;
             
             pathPoints.push({ x: px, y: py });
         }
     }
     
-    // Рисуем все 3 пружинки
-    for (let i = 0; i < spiralCount; i++) {
-        const spiralStartX = startX + i * spiralSpacing;
-        const spiralEndX = spiralStartX + spiralWidth;
+    // Рисуем все 3 волнистые линии
+    for (let i = 0; i < waveCount; i++) {
+        const waveStartX = startX + i * waveSpacing;
+        const waveEndX = waveStartX + waveWidth;
         const isCompleted = completedSubTasks.includes(i);
         
-        // Фон пружинки (широкая серая линия)
+        // Фон волнистой линии (очень широкая серая зона для мобильных)
         ctx.strokeStyle = isCompleted ? '#c8e6c9' : '#e0e0e0';
-        ctx.lineWidth = 30; // Увеличенная толщина линии
+        ctx.lineWidth = 60; // Очень широкая зона допуска для пальца
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
         ctx.beginPath();
         
-        // Рисуем траекторию пружинки
-        const totalSteps = 200;
+        // Рисуем траекторию волнистой линии
+        const totalSteps = 150;
         for (let j = 0; j <= totalSteps; j++) {
             const t = j / totalSteps;
-            const px = spiralStartX + t * spiralWidth;
-            const angle = t * coilsPerSpiral * Math.PI * 2;
-            const py = centerY + Math.sin(angle) * spiralHeight / 2;
+            const px = waveStartX + t * waveWidth;
+            const angle = t * wavesPerLine * Math.PI * 2;
+            const py = centerY + Math.sin(angle) * waveHeight / 2;
             
             if (j === 0) {
                 ctx.moveTo(px, py);
@@ -2464,15 +2501,15 @@ function drawPathLoops() {
         
         // Целевая траектория (пунктир)
         ctx.strokeStyle = isCompleted ? '#4caf50' : '#667eea';
-        ctx.lineWidth = 3;
-        ctx.setLineDash(isCompleted ? [] : [10, 5]);
+        ctx.lineWidth = 4;
+        ctx.setLineDash(isCompleted ? [] : [15, 8]); // Более крупный пунктир
         ctx.beginPath();
         
         for (let j = 0; j <= totalSteps; j++) {
             const t = j / totalSteps;
-            const px = spiralStartX + t * spiralWidth;
-            const angle = t * coilsPerSpiral * Math.PI * 2;
-            const py = centerY + Math.sin(angle) * spiralHeight / 2;
+            const px = waveStartX + t * waveWidth;
+            const angle = t * wavesPerLine * Math.PI * 2;
+            const py = centerY + Math.sin(angle) * waveHeight / 2;
             
             if (j === 0) {
                 ctx.moveTo(px, py);
@@ -2483,49 +2520,49 @@ function drawPathLoops() {
         ctx.stroke();
         ctx.setLineDash([]);
         
-        // Стартовая точка (слева, в начале первого витка)
-        const startY = centerY; // Начинаем по центру
+        // Стартовая точка (слева)
+        const startY = centerY;
         if (isCompleted) {
             ctx.fillStyle = '#4caf50';
             ctx.beginPath();
-            ctx.arc(spiralStartX, startY, 15, 0, Math.PI * 2); // Увеличенный размер точки
+            ctx.arc(waveStartX, startY, 18, 0, Math.PI * 2); // Крупная точка для мобильных
             ctx.fill();
             ctx.strokeStyle = 'white';
-            ctx.lineWidth = 3;
+            ctx.lineWidth = 4;
             ctx.lineCap = 'round';
             ctx.beginPath();
-            ctx.moveTo(spiralStartX - 6, startY);
-            ctx.lineTo(spiralStartX - 2, startY + 5);
-            ctx.lineTo(spiralStartX + 6, startY - 5);
+            ctx.moveTo(waveStartX - 7, startY);
+            ctx.lineTo(waveStartX - 2, startY + 6);
+            ctx.lineTo(waveStartX + 7, startY - 6);
             ctx.stroke();
         } else {
             ctx.fillStyle = '#4caf50';
             ctx.beginPath();
-            ctx.arc(spiralStartX, startY, 15, 0, Math.PI * 2); // Увеличенный размер точки
+            ctx.arc(waveStartX, startY, 18, 0, Math.PI * 2);
             ctx.fill();
         }
         
-        // Финишная точка (справа, в конце последнего витка)
-        const finalAngle = coilsPerSpiral * Math.PI * 2;
-        const endY = centerY + Math.sin(finalAngle) * spiralHeight / 2;
+        // Финишная точка (справа)
+        const finalAngle = wavesPerLine * Math.PI * 2;
+        const endY = centerY + Math.sin(finalAngle) * waveHeight / 2;
         if (isCompleted) {
             ctx.fillStyle = '#4caf50';
             ctx.beginPath();
-            ctx.arc(spiralEndX, endY, 15, 0, Math.PI * 2); // Увеличенный размер точки
+            ctx.arc(waveEndX, endY, 18, 0, Math.PI * 2);
             ctx.fill();
             ctx.strokeStyle = 'white';
-            ctx.lineWidth = 3;
+            ctx.lineWidth = 4;
             ctx.lineCap = 'round';
             ctx.beginPath();
-            ctx.moveTo(spiralEndX - 6, endY);
-            ctx.lineTo(spiralEndX - 2, endY + 5);
-            ctx.lineTo(spiralEndX + 6, endY - 5);
+            ctx.moveTo(waveEndX - 7, endY);
+            ctx.lineTo(waveEndX - 2, endY + 6);
+            ctx.lineTo(waveEndX + 7, endY - 6);
             ctx.stroke();
         } else {
             ctx.strokeStyle = '#ff9800';
-            ctx.lineWidth = 3;
+            ctx.lineWidth = 4;
             ctx.beginPath();
-            ctx.arc(spiralEndX, endY, 15, 0, Math.PI * 2); // Увеличенный размер точки
+            ctx.arc(waveEndX, endY, 18, 0, Math.PI * 2);
             ctx.stroke();
         }
     }
