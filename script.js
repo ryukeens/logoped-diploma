@@ -34,6 +34,21 @@ let startZone = null; // Зона старта
 let pathStarted = false; // Флаг начала движения
 let pathWidth = 40; // Ширина дорожки
 
+// Переменные для модуля 3 (Базовые элементы)
+let templateShape = null; // Шаблон фигуры для обводки
+let userShape = []; // Фигура пользователя
+let shapeType = null; // Тип фигуры (circle, oval, line, etc.)
+
+// Переменные для модуля 4 (Серийность)
+let patternSequence = []; // Последовательность элементов паттерна
+let userSequence = []; // Последовательность пользователя
+let currentPatternIndex = 0; // Текущий индекс в паттерне
+let targetZones = []; // Зоны для размещения элементов
+
+// Переменные для системы валидации
+let validationEnabled = false; // Флаг включения валидации
+let validationResult = null; // Результат последней валидации
+
 // Загрузка статистики из localStorage
 function loadStats() {
     const saved = localStorage.getItem('graphomotorStats');
@@ -47,44 +62,442 @@ function saveStats() {
     localStorage.setItem('graphomotorStats', JSON.stringify(stats));
 }
 
+// ============================================
+// УНИВЕРСАЛЬНАЯ СИСТЕМА ВАЛИДАЦИИ
+// ============================================
+
+/**
+ * Универсальная функция валидации действий пользователя
+ * Определяет тип модуля и применяет соответствующие правила проверки
+ * @returns {Object} { valid: boolean, reason: string }
+ */
+function validateUserAction() {
+    if (!currentExercise || !currentModule) {
+        console.warn('[Validation] Нет активного упражнения');
+        return { valid: false, reason: 'Нет активного упражнения' };
+    }
+    
+    console.log(`[Validation] Проверка модуля ${currentModule}, упражнение: ${currentExercise.type}`);
+    
+    // Определяем тип модуля и вызываем соответствующую функцию валидации
+    switch(currentModule) {
+        case 1:
+            return validateModule1(); // Ориентировка на плоскости
+        case 2:
+            return validateModule2(); // Дорожки и траектории
+        case 3:
+            return validateModule3(); // Базовые элементы
+        case 4:
+            return validateModule4(); // Серийность
+        case 5:
+            return validateModule5(); // Копирование образца
+        case 6:
+            return validateModule6(); // Графические диктанты
+        case 7:
+            return validateModule7(); // Самоконтроль
+        case 8:
+            return validateModule8(); // Игровые упражнения
+        default:
+            console.warn('[Validation] Неизвестный модуль:', currentModule);
+            return { valid: false, reason: 'Неизвестный модуль' };
+    }
+}
+
+/**
+ * Валидация модуля 1: Ориентировка на плоскости
+ * Проверяет попадание в целевую зону
+ */
+function validateModule1() {
+    // Модуль 1 использует автоматическую проверку при клике
+    // Валидация происходит в checkPointPlacement()
+    return { valid: exerciseCompleted, reason: exerciseCompleted ? 'Точка поставлена верно' : 'Точка не поставлена' };
+}
+
+/**
+ * Валидация модуля 2: Дорожки и траектории
+ * Проверяет прохождение пути с учетом отклонений
+ */
+function validateModule2() {
+    console.log('[Module 2 Validation] Начало проверки');
+    console.log('- Длина пути:', userPath.length);
+    console.log('- Выходов за границы:', exitCount);
+    console.log('- Достигнут финиш:', finishZone ? 'проверяется' : 'нет зоны');
+    
+    // Проверка 1: Путь должен быть проведен
+    if (userPath.length < 10) {
+        console.warn('[Module 2 Validation] ❌ Путь слишком короткий');
+        return { valid: false, reason: 'Путь слишком короткий (минимум 10 точек)' };
+    }
+    
+    // Проверка 2: Не более 3 выходов за границы
+    if (exitCount > 3) {
+        console.warn('[Module 2 Validation] ❌ Слишком много выходов за границы:', exitCount);
+        return { valid: false, reason: `Слишком много выходов за границы (${exitCount}/3)` };
+    }
+    
+    // Проверка 3: Достижение финиша
+    if (finishZone && userPath.length > 0) {
+        const lastPoint = userPath[userPath.length - 1];
+        const distanceToFinish = Math.sqrt(
+            Math.pow(lastPoint.x - finishZone.x, 2) + 
+            Math.pow(lastPoint.y - finishZone.y, 2)
+        );
+        
+        if (distanceToFinish > finishZone.radius) {
+            console.warn('[Module 2 Validation] ❌ Финиш не достигнут. Расстояние:', distanceToFinish.toFixed(2));
+            return { valid: false, reason: 'Финиш не достигнут' };
+        }
+    }
+    
+    // Проверка 4: Большинство точек внутри серой зоны (70%)
+    let pointsInBounds = 0;
+    for (let i = 0; i < userPath.length; i++) {
+        const distance = getDistanceToPath(userPath[i]);
+        if (distance <= 25) {
+            pointsInBounds++;
+        }
+    }
+    
+    const accuracy = pointsInBounds / userPath.length;
+    const accuracyPercent = (accuracy * 100).toFixed(1);
+    
+    console.log(`[Module 2 Validation] Точность: ${accuracyPercent}% (${pointsInBounds}/${userPath.length})`);
+    
+    if (accuracy < 0.7) {
+        console.warn('[Module 2 Validation] ❌ Недостаточная точность');
+        return { valid: false, reason: `Недостаточная точность (${accuracyPercent}%, требуется 70%)` };
+    }
+    
+    console.log('[Module 2 Validation] ✅ Все проверки пройдены');
+    return { valid: true, reason: `Отлично! Точность ${accuracyPercent}%` };
+}
+
+/**
+ * Валидация модуля 3: Базовые элементы
+ * Проверяет соответствие нарисованной фигуры шаблону
+ */
+function validateModule3() {
+    console.log('[Module 3 Validation] Начало проверки');
+    console.log('- Тип фигуры:', shapeType);
+    console.log('- Точек пользователя:', userShape.length);
+    
+    if (userShape.length < 10) {
+        console.warn('[Module 3 Validation] ❌ Фигура не нарисована');
+        return { valid: false, reason: 'Фигура не нарисована' };
+    }
+    
+    // Для модуля 3 проверяем соответствие шаблону
+    // Пока упрощенная проверка - просто наличие рисунка
+    // TODO: Добавить проверку замкнутости и соответствия шаблону
+    
+    if (shapeType === 'circle' || shapeType === 'oval') {
+        // Проверка замкнутости фигуры
+        const firstPoint = userShape[0];
+        const lastPoint = userShape[userShape.length - 1];
+        const distance = Math.sqrt(
+            Math.pow(lastPoint.x - firstPoint.x, 2) + 
+            Math.pow(lastPoint.y - firstPoint.y, 2)
+        );
+        
+        if (distance > 30) {
+            console.warn('[Module 3 Validation] ❌ Фигура не замкнута. Расстояние:', distance.toFixed(2));
+            return { valid: false, reason: 'Фигура не замкнута (соедини начало и конец)' };
+        }
+    }
+    
+    // Проверка соответствия шаблону (80% точек в серой зоне)
+    if (templateShape && templateShape.length > 0) {
+        let pointsInTemplate = 0;
+        for (let i = 0; i < userShape.length; i++) {
+            const minDistance = getMinDistanceToTemplate(userShape[i], templateShape);
+            if (minDistance <= 30) { // 30px допуск
+                pointsInTemplate++;
+            }
+        }
+        
+        const accuracy = pointsInTemplate / userShape.length;
+        const accuracyPercent = (accuracy * 100).toFixed(1);
+        
+        console.log(`[Module 3 Validation] Соответствие шаблону: ${accuracyPercent}%`);
+        
+        if (accuracy < 0.8) {
+            console.warn('[Module 3 Validation] ❌ Недостаточное соответствие шаблону');
+            return { valid: false, reason: `Следуй ближе к шаблону (${accuracyPercent}%, требуется 80%)` };
+        }
+    }
+    
+    console.log('[Module 3 Validation] ✅ Фигура нарисована правильно');
+    return { valid: true, reason: 'Отлично! Фигура нарисована правильно' };
+}
+
+/**
+ * Валидация модуля 4: Серийность и динамический праксис
+ * Проверяет последовательность и точность элементов
+ */
+function validateModule4() {
+    console.log('[Module 4 Validation] Начало проверки');
+    console.log('- Ожидаемая последовательность:', patternSequence);
+    console.log('- Последовательность пользователя:', userSequence);
+    
+    if (userSequence.length === 0) {
+        console.warn('[Module 4 Validation] ❌ Паттерн не нарисован');
+        return { valid: false, reason: 'Паттерн не нарисован' };
+    }
+    
+    // Проверка последовательности
+    if (userSequence.length < patternSequence.length) {
+        console.warn('[Module 4 Validation] ❌ Паттерн не завершен');
+        return { valid: false, reason: `Продолжи паттерн (${userSequence.length}/${patternSequence.length})` };
+    }
+    
+    // Проверка правильности последовательности
+    for (let i = 0; i < patternSequence.length; i++) {
+        if (userSequence[i] !== patternSequence[i]) {
+            console.warn(`[Module 4 Validation] ❌ Ошибка в позиции ${i + 1}: ожидалось ${patternSequence[i]}, получено ${userSequence[i]}`);
+            return { valid: false, reason: `Ошибка в позиции ${i + 1}: должен быть ${patternSequence[i]}` };
+        }
+    }
+    
+    console.log('[Module 4 Validation] ✅ Последовательность верна');
+    return { valid: true, reason: 'Отлично! Последовательность верна' };
+}
+
+/**
+ * Валидация модулей 5-8 (заглушки для будущей реализации)
+ */
+function validateModule5() {
+    console.log('[Module 5 Validation] Упрощенная проверка');
+    return { valid: true, reason: 'Упражнение выполнено' };
+}
+
+function validateModule6() {
+    console.log('[Module 6 Validation] Упрощенная проверка');
+    return { valid: true, reason: 'Упражнение выполнено' };
+}
+
+function validateModule7() {
+    console.log('[Module 7 Validation] Упрощенная проверка');
+    return { valid: true, reason: 'Упражнение выполнено' };
+}
+
+function validateModule8() {
+    console.log('[Module 8 Validation] Упрощенная проверка');
+    return { valid: true, reason: 'Упражнение выполнено' };
+}
+
+/**
+ * Вспомогательная функция: минимальное расстояние до шаблона
+ */
+function getMinDistanceToTemplate(point, template) {
+    let minDistance = Infinity;
+    for (let i = 0; i < template.length; i++) {
+        const distance = Math.sqrt(
+            Math.pow(point.x - template[i].x, 2) + 
+            Math.pow(point.y - template[i].y, 2)
+        );
+        if (distance < minDistance) {
+            minDistance = distance;
+        }
+    }
+    return minDistance;
+}
+
+/**
+ * Включение/отключение кнопки "Далее" на основе валидации
+ */
+function updateNextButtonState() {
+    const nextBtn = document.getElementById('next-btn');
+    if (!nextBtn) return;
+    
+    const result = validateUserAction();
+    validationResult = result;
+    
+    if (result.valid) {
+        // Активируем кнопку
+        nextBtn.disabled = false;
+        nextBtn.style.opacity = '1';
+        nextBtn.style.cursor = 'pointer';
+        exerciseCompleted = true;
+        console.log('[Button State] ✅ Кнопка "Далее" активирована');
+    } else {
+        // Блокируем кнопку
+        nextBtn.disabled = true;
+        nextBtn.style.opacity = '0.5';
+        nextBtn.style.cursor = 'not-allowed';
+        exerciseCompleted = false;
+        console.log('[Button State] ❌ Кнопка "Далее" заблокирована:', result.reason);
+    }
+}
+
+/**
+ * Блокировка кнопки "Далее" при старте упражнения
+ */
+function disableNextButton() {
+    const nextBtn = document.getElementById('next-btn');
+    if (nextBtn) {
+        nextBtn.disabled = true;
+        nextBtn.style.opacity = '0.5';
+        nextBtn.style.cursor = 'not-allowed';
+        exerciseCompleted = false;
+        console.log('[Button State] 🔒 Кнопка "Далее" заблокирована при старте');
+    }
+}
+
 // Инициализация при загрузке страницы
 document.addEventListener('DOMContentLoaded', () => {
-    loadStats();
+    console.log('[Init] Инициализация приложения');
+    
+    try {
+        loadStats();
+        console.log('[Init] ✅ Статистика загружена');
+    } catch (error) {
+        console.error('[Init] ❌ Ошибка загрузки статистики:', error);
+    }
+    
     // Не инициализируем canvas сразу, только когда он понадобится
+    
+    // Инициализация обработчиков для кнопок управления упражнениями
+    try {
+        initControlButtons();
+        console.log('[Init] ✅ Обработчики кнопок инициализированы');
+    } catch (error) {
+        console.error('[Init] ❌ Ошибка инициализации кнопок:', error);
+    }
+    
+    console.log('[Init] Приложение готово к работе');
 });
+
+// Глобальная обработка ошибок
+window.addEventListener('error', (event) => {
+    console.error('[Global Error]', event.error);
+});
+
+window.addEventListener('unhandledrejection', (event) => {
+    console.error('[Unhandled Promise Rejection]', event.reason);
+});
+
+// Инициализация обработчиков кнопок управления
+function initControlButtons() {
+    // Кнопка "Очистить"
+    const clearBtn = document.getElementById('clear-btn');
+    if (clearBtn) {
+        addTouchHandler(clearBtn, clearCanvas);
+    }
+    
+    // Кнопка "Подсказка"
+    const hintBtn = document.getElementById('hint-btn');
+    if (hintBtn) {
+        addTouchHandler(hintBtn, showHint);
+    }
+    
+    // Кнопка "Дальше"
+    const nextBtn = document.getElementById('next-btn');
+    if (nextBtn) {
+        addTouchHandler(nextBtn, nextExercise);
+    }
+}
+
+// Универсальный обработчик для touch и click событий
+function addTouchHandler(element, callback) {
+    let touchHandled = false;
+    
+    // Touch события для мобильных
+    element.addEventListener('touchstart', (e) => {
+        touchHandled = true;
+        e.preventDefault();
+        callback();
+    }, { passive: false });
+    
+    // Pointer события (современный стандарт)
+    element.addEventListener('pointerdown', (e) => {
+        if (!touchHandled) {
+            e.preventDefault();
+            callback();
+        }
+        touchHandled = false;
+    });
+    
+    // Click как fallback для desktop
+    element.addEventListener('click', (e) => {
+        if (!touchHandled) {
+            e.preventDefault();
+            callback();
+        }
+        touchHandled = false;
+    });
+}
 
 // Навигация
 function showMainMenu() {
+    console.log('[Navigation] Показываем главное меню');
     hideAllScreens();
-    document.querySelector('.main-menu').classList.remove('hidden');
+    const mainMenu = document.querySelector('.main-menu');
+    if (mainMenu) {
+        mainMenu.classList.remove('hidden');
+        console.log('[Navigation] ✅ Главное меню показано');
+    } else {
+        console.error('[Navigation] ❌ Элемент .main-menu не найден!');
+    }
 }
 
 function showExercises() {
+    console.log('[Navigation] Показываем меню упражнений');
     hideAllScreens();
-    document.getElementById('exercises-menu').classList.remove('hidden');
+    const exercisesMenu = document.getElementById('exercises-menu');
+    if (exercisesMenu) {
+        exercisesMenu.classList.remove('hidden');
+        console.log('[Navigation] ✅ Меню упражнений показано');
+    } else {
+        console.error('[Navigation] ❌ Элемент #exercises-menu не найден!');
+    }
 }
 
 function showResults() {
+    console.log('[Navigation] Показываем результаты');
     hideAllScreens();
-    document.getElementById('results-screen').classList.remove('hidden');
-    updateResultsDisplay();
+    const resultsScreen = document.getElementById('results-screen');
+    if (resultsScreen) {
+        resultsScreen.classList.remove('hidden');
+        updateResultsDisplay();
+        console.log('[Navigation] ✅ Экран результатов показан');
+    } else {
+        console.error('[Navigation] ❌ Элемент #results-screen не найден!');
+    }
 }
 
 function showInfo() {
+    console.log('[Navigation] Показываем информацию');
     hideAllScreens();
-    document.getElementById('info-screen').classList.remove('hidden');
+    const infoScreen = document.getElementById('info-screen');
+    if (infoScreen) {
+        infoScreen.classList.remove('hidden');
+        console.log('[Navigation] ✅ Экран информации показан');
+    } else {
+        console.error('[Navigation] ❌ Элемент #info-screen не найден!');
+    }
 }
 
 function hideAllScreens() {
-    document.querySelector('.main-menu').classList.add('hidden');
-    document.getElementById('exercises-menu').classList.add('hidden');
-    document.getElementById('exercise-screen').classList.add('hidden');
-    document.getElementById('results-screen').classList.add('hidden');
-    document.getElementById('info-screen').classList.add('hidden');
+    console.log('[Navigation] Скрываем все экраны');
+    
+    const mainMenu = document.querySelector('.main-menu');
+    const exercisesMenu = document.getElementById('exercises-menu');
+    const exerciseScreen = document.getElementById('exercise-screen');
+    const resultsScreen = document.getElementById('results-screen');
+    const infoScreen = document.getElementById('info-screen');
+    
+    if (mainMenu) mainMenu.classList.add('hidden');
+    if (exercisesMenu) exercisesMenu.classList.add('hidden');
+    if (exerciseScreen) exerciseScreen.classList.add('hidden');
+    if (resultsScreen) resultsScreen.classList.add('hidden');
+    if (infoScreen) infoScreen.classList.add('hidden');
+    
+    console.log('[Navigation] Все экраны скрыты');
 }
 
 // Начать занятие (автоматический набор упражнений)
 function startLesson() {
+    console.log('[Lesson] Начинаем занятие');
     const lessonModules = [1, 2, 4, 7]; // Разминка, траектории, серийность, самоконтроль
     currentModule = lessonModules[0];
     loadModule(currentModule);
@@ -188,6 +601,20 @@ function displayExercise(exercise) {
     finishZone = null;
     startZone = null;
     pathStarted = false;
+    
+    // Сброс переменных для модуля 3
+    templateShape = null;
+    userShape = [];
+    shapeType = null;
+    
+    // Сброс переменных для модуля 4
+    patternSequence = [];
+    userSequence = [];
+    currentPatternIndex = 0;
+    targetZones = [];
+    
+    // Блокируем кнопку "Далее" при старте упражнения
+    disableNextButton();
     
     if (canvas && ctx) {
         clearCanvas();
@@ -308,6 +735,9 @@ function checkPointPlacement(pos) {
         showSuccessFeedback();
         exerciseCompleted = true;
         
+        // Активируем кнопку "Далее"
+        updateNextButtonState();
+        
         // Автоматически переходим к следующему через 1.5 секунды
         setTimeout(() => {
             nextExercise();
@@ -316,6 +746,10 @@ function checkPointPlacement(pos) {
         // Промах
         drawErrorPoint(pos);
         showErrorFeedback();
+        exerciseCompleted = false;
+        
+        // Блокируем кнопку "Далее"
+        disableNextButton();
         
         // Убираем красную точку через 1 секунду
         setTimeout(() => {
@@ -452,6 +886,20 @@ function stopDrawing(e) {
     if (currentExercise && currentExercise.type.startsWith('path-')) {
         checkPathFinish();
     }
+    
+    // Модуль 3: Сохраняем фигуру пользователя
+    if (currentModule === 3 && userShape.length > 0) {
+        console.log('[Module 3] Рисование завершено, точек:', userShape.length);
+        // Проверяем валидацию после небольшой задержки
+        setTimeout(() => {
+            updateNextButtonState();
+        }, 100);
+    }
+    
+    // Универсальная проверка валидации для всех модулей
+    setTimeout(() => {
+        updateNextButtonState();
+    }, 200);
 }
 
 function getPosition(e) {
@@ -579,17 +1027,21 @@ function checkPathFinish() {
 function completePathExercise() {
     if (exerciseCompleted) return;
     
-    exerciseCompleted = true;
     isDrawing = false;
     
-    // Проверяем точность прохождения пути
-    const pathAccurate = checkPathAccuracy();
+    // Используем универсальную систему валидации
+    const result = validateUserAction();
     
-    if (!pathAccurate) {
+    if (!result.valid) {
         // Упражнение не засчитано
-        showPathFailureFeedback();
+        console.warn('[Path Exercise] Валидация не пройдена:', result.reason);
+        showPathFailureFeedback(result.reason);
+        exerciseCompleted = false;
         return;
     }
+    
+    // Упражнение пройдено успешно
+    exerciseCompleted = true;
     
     // Рисуем финишную отметку
     drawFinishMark();
@@ -606,10 +1058,13 @@ function completePathExercise() {
     feedback.className = 'feedback';
     feedback.classList.remove('hidden');
     
-    // Автоматический переход
-    setTimeout(() => {
-        nextExercise();
-    }, 2000);
+    // Активируем кнопку "Далее"
+    updateNextButtonState();
+    
+    // Автоматический переход убираем - пользователь сам нажмет "Далее"
+    // setTimeout(() => {
+    //     nextExercise();
+    // }, 2000);
 }
 
 // Проверка точности прохождения пути
@@ -640,9 +1095,9 @@ function checkPathAccuracy() {
 }
 
 // Показ сообщения о неудаче
-function showPathFailureFeedback() {
+function showPathFailureFeedback(reason) {
     const feedback = document.getElementById('feedback');
-    feedback.textContent = '⚠️ Старайся не покидать дорожку! Попробуй еще раз.';
+    feedback.textContent = reason ? `⚠️ ${reason}` : '⚠️ Старайся не покидать дорожку! Попробуй еще раз.';
     feedback.className = 'feedback error';
     feedback.classList.remove('hidden');
     
@@ -661,10 +1116,12 @@ function showTryAgainButton() {
         tryAgainBtn.id = 'try-again-btn';
         tryAgainBtn.className = 'control-btn primary';
         tryAgainBtn.textContent = '🔄 Попробовать снова';
-        tryAgainBtn.onclick = retryExercise;
+        
+        // Используем touch handler вместо onclick
+        addTouchHandler(tryAgainBtn, retryExercise);
         
         // Вставляем перед кнопкой "Дальше"
-        const nextBtn = controls.querySelector('.control-btn.primary');
+        const nextBtn = document.getElementById('next-btn');
         if (nextBtn) {
             controls.insertBefore(tryAgainBtn, nextBtn);
         } else {
@@ -1780,6 +2237,12 @@ function nextExercise() {
     const tryAgainBtn = document.getElementById('try-again-btn');
     if (tryAgainBtn) {
         tryAgainBtn.remove();
+    }
+    
+    // Скрываем feedback если он показан
+    const feedback = document.getElementById('feedback');
+    if (feedback) {
+        feedback.classList.add('hidden');
     }
     
     if (exerciseCompleted) {
