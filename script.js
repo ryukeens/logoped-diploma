@@ -220,9 +220,15 @@ function initCanvas() {
 
 function resizeCanvas() {
     if (!canvas) return;
-    const rect = canvas.getBoundingClientRect();
+    
+    // Получаем размеры контейнера canvas
+    const container = canvas.parentElement;
+    if (!container) return;
+    
+    const rect = container.getBoundingClientRect();
     canvas.width = rect.width;
     canvas.height = rect.height;
+    
     console.log('Canvas resized:', canvas.width, 'x', canvas.height);
     
     // Перерисовываем шаблон после изменения размера
