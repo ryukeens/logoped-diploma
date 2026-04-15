@@ -141,7 +141,10 @@ function getModuleExercises(moduleNum) {
         ],
         4: [
             { title: 'Ритмичный заборчик', type: 'rhythmic-fence', instruction: 'Веди пальцем по зигзагу, чередуя высоту зубьев' },
-            { title: 'Волна и утес', type: 'wave-cliff', instruction: 'Чередуй плавные волны и резкие углы' }
+            { title: 'Волна и утес', type: 'wave-cliff', instruction: 'Чередуй плавные волны и резкие углы' },
+            { title: 'Ритмическая спираль', type: 'rhythmic-spiral', instruction: 'Веди пальцем по спирали, чередуя большие и маленькие петли' },
+            { title: 'Зубчатая стена', type: 'meander-wall', instruction: 'Веди пальцем по ступенькам, строго по горизонтали и вертикали' },
+            { title: 'Комбинированная цепь', type: 'combined-chain', instruction: 'Финальный тест: круги, углы и прямые линии в одной цепи' }
         ],
         5: [
             { title: 'Повтори узор', type: 'copy', instruction: 'Повтори узор справа' },
@@ -369,7 +372,11 @@ function handleCanvasTouch(e) {
         startDrawingPath(e);
     }
     // Модуль 4: Серийность движений (используют механизм дорожек)
-    else if (currentExercise && (currentExercise.type === 'rhythmic-fence' || currentExercise.type === 'wave-cliff')) {
+    else if (currentExercise && (currentExercise.type === 'rhythmic-fence' || 
+        currentExercise.type === 'wave-cliff' || 
+        currentExercise.type === 'rhythmic-spiral' ||
+        currentExercise.type === 'meander-wall' ||
+        currentExercise.type === 'combined-chain')) {
         startDrawingPath(e);
     }
     else {
@@ -393,7 +400,11 @@ function handleCanvasClick(e) {
         startDrawingPath(e);
     }
     // Модуль 4: Серийность движений (используют механизм дорожек)
-    else if (currentExercise && (currentExercise.type === 'rhythmic-fence' || currentExercise.type === 'wave-cliff')) {
+    else if (currentExercise && (currentExercise.type === 'rhythmic-fence' || 
+        currentExercise.type === 'wave-cliff' || 
+        currentExercise.type === 'rhythmic-spiral' ||
+        currentExercise.type === 'meander-wall' ||
+        currentExercise.type === 'combined-chain')) {
         startDrawingPath(e);
     }
     else {
@@ -538,7 +549,10 @@ function draw(e) {
     // Модуль 2, 3 и 4: Проверка границ дорожки
     if (currentExercise && (currentExercise.type.startsWith('path-') || 
         currentExercise.type === 'rhythmic-fence' || 
-        currentExercise.type === 'wave-cliff')) {
+        currentExercise.type === 'wave-cliff' ||
+        currentExercise.type === 'rhythmic-spiral' ||
+        currentExercise.type === 'meander-wall' ||
+        currentExercise.type === 'combined-chain')) {
         drawPathWithCheck(pos);
         return;
     }
@@ -561,7 +575,10 @@ function stopDrawing(e) {
     // Модуль 2, 3 и 4: Проверка достижения финиша
     if (currentExercise && (currentExercise.type.startsWith('path-') || 
         currentExercise.type === 'rhythmic-fence' || 
-        currentExercise.type === 'wave-cliff')) {
+        currentExercise.type === 'wave-cliff' ||
+        currentExercise.type === 'rhythmic-spiral' ||
+        currentExercise.type === 'meander-wall' ||
+        currentExercise.type === 'combined-chain')) {
         checkPathFinish();
     }
 }
@@ -779,7 +796,11 @@ function drawPathWithCheck(pos) {
     }
     
     // Отладка для Модуля 4
-    if (currentExercise && (currentExercise.type === 'rhythmic-fence' || currentExercise.type === 'wave-cliff')) {
+    if (currentExercise && (currentExercise.type === 'rhythmic-fence' || 
+        currentExercise.type === 'wave-cliff' || 
+        currentExercise.type === 'rhythmic-spiral' ||
+        currentExercise.type === 'meander-wall' ||
+        currentExercise.type === 'combined-chain')) {
         console.log('Module 4 check:', {
             exerciseType: currentExercise.type,
             distanceToPath: distanceToPath.toFixed(2),
@@ -801,9 +822,24 @@ function drawPathWithCheck(pos) {
         boundaryTolerance = 30; // Увеличенная зона допуска для спирали
     }
     
-    // Для упражнений Модуля 4 (серийность движений) делаем более мягкие границы
+    // Для упражнений Модуля 4 (серийность движений) делаем разные границы
     if (currentExercise && (currentExercise.type === 'rhythmic-fence' || currentExercise.type === 'wave-cliff')) {
         boundaryTolerance = 25; // Увеличенная зона допуска для сложных траекторий
+    }
+    
+    // Для ритмической спирали - самая строгая проверка (самый сложный уровень)
+    if (currentExercise && currentExercise.type === 'rhythmic-spiral') {
+        boundaryTolerance = 20; // Строгая зона допуска для спирали
+    }
+    
+    // Для меандра (зубчатой стены) - строгая проверка углов
+    if (currentExercise && currentExercise.type === 'meander-wall') {
+        boundaryTolerance = 22; // Строгая зона для прямых углов
+    }
+    
+    // Для комбинированной цепи - самая строгая проверка (финальный уровень)
+    if (currentExercise && currentExercise.type === 'combined-chain') {
+        boundaryTolerance = 25; // Одинаковая зона по всей длине
     }
     
     if (distanceToPath > boundaryTolerance) {
@@ -1079,7 +1115,7 @@ function completePathExercise() {
     }
     
     // Для Модуля 4 - строгая проверка (0 ошибок), как в Модуле 2
-    // (не добавляем allowedErrors для rhythmic-fence и wave-cliff)
+    // (не добавляем allowedErrors для rhythmic-fence, wave-cliff, rhythmic-spiral и meander-wall)
     
     if (exitCount <= allowedErrors) {
         // Для упражнений с несколькими линиями - определяем, какую линию завершили
@@ -1429,6 +1465,15 @@ function drawExerciseTemplate(exercise) {
             break;
         case 'wave-cliff':
             drawWaveCliff();
+            break;
+        case 'rhythmic-spiral':
+            drawRhythmicSpiral();
+            break;
+        case 'meander-wall':
+            drawMeanderWall();
+            break;
+        case 'combined-chain':
+            drawCombinedChain();
             break;
         
         // Другие модули
@@ -2752,6 +2797,367 @@ function drawWaveCliff() {
     ctx.strokeStyle = '#667eea';
     ctx.lineWidth = 3;
     ctx.setLineDash([10, 5]);
+    ctx.beginPath();
+    
+    if (pathPoints.length > 0) {
+        ctx.moveTo(pathPoints[0].x, pathPoints[0].y);
+        for (let i = 1; i < pathPoints.length; i++) {
+            ctx.lineTo(pathPoints[i].x, pathPoints[i].y);
+        }
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+    
+    // Стартовая точка
+    if (pathPoints.length > 0) {
+        ctx.fillStyle = '#4caf50';
+        ctx.beginPath();
+        ctx.arc(pathPoints[0].x, pathPoints[0].y, 12, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    
+    // Финишная зона
+    if (pathPoints.length > 0) {
+        const lastPoint = pathPoints[pathPoints.length - 1];
+        finishZone = { x: lastPoint.x, y: lastPoint.y, radius: 30 };
+        ctx.strokeStyle = '#ff9800';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(lastPoint.x, lastPoint.y, 15, 0, Math.PI * 2);
+        ctx.stroke();
+    }
+}
+
+// Ритмическая спираль - чередование больших и маленьких петель
+function drawRhythmicSpiral() {
+    const baseY = canvas.height * 0.65; // Базовая линия (низ петель)
+    const bigRadius = Math.min(55, canvas.width * 0.11); // Радиус большой петли
+    const smallRadius = bigRadius / 2; // Радиус маленькой петли (в 2 раза меньше)
+    
+    // Паттерн: большая -> маленькая -> маленькая -> большая -> маленькая -> маленькая
+    const pattern = ['big', 'small', 'small', 'big', 'small', 'small'];
+    
+    // Вычисляем общую ширину
+    const totalWidth = canvas.width * 0.75;
+    const startX = (canvas.width - totalWidth) / 2;
+    
+    // Вычисляем ширину каждой петли с учетом их размеров
+    const bigWidth = bigRadius * 2.2; // Ширина большой петли с запасом
+    const smallWidth = smallRadius * 2.2; // Ширина маленькой петли с запасом
+    
+    pathPoints = [];
+    let currentX = startX;
+    
+    // Генерируем точки траектории для каждой петли
+    for (let i = 0; i < pattern.length; i++) {
+        const isBig = pattern[i] === 'big';
+        const radius = isBig ? bigRadius : smallRadius;
+        const loopWidth = isBig ? bigWidth : smallWidth;
+        
+        // Центр петли
+        const centerX = currentX + loopWidth / 2;
+        const centerY = baseY - radius; // Центр на высоте радиуса от базовой линии
+        
+        // Генерируем точки петли (начинаем снизу, идем против часовой стрелки)
+        const steps = 50;
+        for (let j = 0; j <= steps; j++) {
+            const t = j / steps;
+            // Начинаем с нижней точки (угол = π/2), идем полный круг
+            const angle = Math.PI / 2 + t * Math.PI * 2;
+            const px = centerX + Math.cos(angle) * radius;
+            const py = centerY + Math.sin(angle) * radius;
+            pathPoints.push({ x: px, y: py });
+        }
+        
+        // Переходим к следующей петле
+        currentX += loopWidth;
+    }
+    
+    // Рисуем фон дорожки с переменной шириной
+    currentX = startX;
+    for (let i = 0; i < pattern.length; i++) {
+        const isBig = pattern[i] === 'big';
+        const radius = isBig ? bigRadius : smallRadius;
+        const loopWidth = isBig ? bigWidth : smallWidth;
+        const lineWidth = isBig ? Math.min(40, canvas.width * 0.09) : Math.min(30, canvas.width * 0.065);
+        
+        const centerX = currentX + loopWidth / 2;
+        const centerY = baseY - radius;
+        
+        // Рисуем серую зону для этой петли
+        ctx.strokeStyle = '#e0e0e0';
+        ctx.lineWidth = lineWidth;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+        ctx.stroke();
+        
+        currentX += loopWidth;
+    }
+    
+    // Целевая траектория (пунктир)
+    ctx.strokeStyle = '#667eea';
+    ctx.lineWidth = 3;
+    ctx.setLineDash([10, 5]);
+    ctx.beginPath();
+    
+    if (pathPoints.length > 0) {
+        ctx.moveTo(pathPoints[0].x, pathPoints[0].y);
+        for (let i = 1; i < pathPoints.length; i++) {
+            ctx.lineTo(pathPoints[i].x, pathPoints[i].y);
+        }
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+    
+    // Стартовая точка (внизу первой петли)
+    if (pathPoints.length > 0) {
+        ctx.fillStyle = '#4caf50';
+        ctx.beginPath();
+        ctx.arc(pathPoints[0].x, pathPoints[0].y, 12, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    
+    // Финишная зона (внизу последней петли)
+    if (pathPoints.length > 0) {
+        const lastPoint = pathPoints[pathPoints.length - 1];
+        finishZone = { x: lastPoint.x, y: lastPoint.y, radius: 30 };
+        ctx.strokeStyle = '#ff9800';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(lastPoint.x, lastPoint.y, 15, 0, Math.PI * 2);
+        ctx.stroke();
+    }
+}
+
+// Зубчатая стена (Меандр) - строго горизонтальные и вертикальные отрезки
+function drawMeanderWall() {
+    const startX = canvas.width * 0.1; // Начало слева
+    const startY = canvas.height * 0.7; // Начало внизу
+    
+    const horizontalLength = Math.min(45, canvas.width * 0.09); // Длина горизонтального отрезка
+    const verticalLength = Math.min(50, canvas.height * 0.12); // Длина вертикального отрезка
+    const cycles = 5; // Количество циклов (вправо-вверх-вправо-вниз)
+    
+    pathPoints = [];
+    
+    let currentX = startX;
+    let currentY = startY;
+    
+    // Генерируем точки траектории
+    for (let i = 0; i < cycles; i++) {
+        // 1. Отрезок ВПРАВО
+        const rightEndX = currentX + horizontalLength;
+        const steps1 = Math.ceil(horizontalLength / 3);
+        for (let j = 0; j <= steps1; j++) {
+            const t = j / steps1;
+            const px = currentX + t * horizontalLength;
+            const py = currentY;
+            pathPoints.push({ x: px, y: py });
+        }
+        currentX = rightEndX;
+        
+        // 2. Отрезок ВВЕРХ
+        const upEndY = currentY - verticalLength;
+        const steps2 = Math.ceil(verticalLength / 3);
+        for (let j = 1; j <= steps2; j++) {
+            const t = j / steps2;
+            const px = currentX;
+            const py = currentY - t * verticalLength;
+            pathPoints.push({ x: px, y: py });
+        }
+        currentY = upEndY;
+        
+        // 3. Отрезок ВПРАВО
+        const rightEndX2 = currentX + horizontalLength;
+        const steps3 = Math.ceil(horizontalLength / 3);
+        for (let j = 1; j <= steps3; j++) {
+            const t = j / steps3;
+            const px = currentX + t * horizontalLength;
+            const py = currentY;
+            pathPoints.push({ x: px, y: py });
+        }
+        currentX = rightEndX2;
+        
+        // 4. Отрезок ВНИЗ
+        const downEndY = currentY + verticalLength;
+        const steps4 = Math.ceil(verticalLength / 3);
+        for (let j = 1; j <= steps4; j++) {
+            const t = j / steps4;
+            const px = currentX;
+            const py = currentY + t * verticalLength;
+            pathPoints.push({ x: px, y: py });
+        }
+        currentY = downEndY;
+    }
+    
+    // Рисуем фон дорожки (серая зона)
+    ctx.strokeStyle = '#e0e0e0';
+    ctx.lineWidth = Math.min(35, canvas.width * 0.08);
+    ctx.lineCap = 'butt'; // Прямые углы без скругления
+    ctx.lineJoin = 'miter'; // Острые углы
+    ctx.beginPath();
+    
+    if (pathPoints.length > 0) {
+        ctx.moveTo(pathPoints[0].x, pathPoints[0].y);
+        for (let i = 1; i < pathPoints.length; i++) {
+            ctx.lineTo(pathPoints[i].x, pathPoints[i].y);
+        }
+    }
+    ctx.stroke();
+    
+    // Целевая траектория (пунктир)
+    ctx.strokeStyle = '#667eea';
+    ctx.lineWidth = 3;
+    ctx.setLineDash([10, 5]);
+    ctx.lineCap = 'butt'; // Прямые углы
+    ctx.lineJoin = 'miter'; // Острые углы
+    ctx.beginPath();
+    
+    if (pathPoints.length > 0) {
+        ctx.moveTo(pathPoints[0].x, pathPoints[0].y);
+        for (let i = 1; i < pathPoints.length; i++) {
+            ctx.lineTo(pathPoints[i].x, pathPoints[i].y);
+        }
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+    
+    // Стартовая точка
+    if (pathPoints.length > 0) {
+        ctx.fillStyle = '#4caf50';
+        ctx.beginPath();
+        ctx.arc(pathPoints[0].x, pathPoints[0].y, 12, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    
+    // Финишная зона
+    if (pathPoints.length > 0) {
+        const lastPoint = pathPoints[pathPoints.length - 1];
+        finishZone = { x: lastPoint.x, y: lastPoint.y, radius: 30 };
+        ctx.strokeStyle = '#ff9800';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(lastPoint.x, lastPoint.y, 15, 0, Math.PI * 2);
+        ctx.stroke();
+    }
+}
+
+// Комбинированная цепь - финальный уровень: плавная волна + острый утес + прямоугольный меандр
+function drawCombinedChain() {
+    const baseY = canvas.height * 0.65; // Базовая линия для всех элементов
+    const totalWidth = canvas.width * 0.8; // 80% от ширины экрана
+    const startX = (canvas.width - totalWidth) / 2; // Центрируем
+    
+    // Разделяем на 3 части: волна (40%) + утес (20%) + меандр (40%)
+    const waveWidth = totalWidth * 0.4;
+    const cliffWidth = totalWidth * 0.2;
+    const meanderWidth = totalWidth * 0.4;
+    
+    pathPoints = [];
+    
+    // ЧАСТЬ 1: Плавная волна (одна широкая и низкая дуга)
+    const waveStartX = startX;
+    const waveEndX = waveStartX + waveWidth;
+    const waveAmplitude = Math.min(30, canvas.height * 0.08); // Низкая волна
+    
+    const waveSteps = 30;
+    for (let i = 0; i <= waveSteps; i++) {
+        const t = i / waveSteps;
+        const x = waveStartX + t * waveWidth;
+        // Половина синусоиды (от 0 до π) для плавной дуги
+        const angle = t * Math.PI;
+        const y = baseY - Math.sin(angle) * waveAmplitude;
+        pathPoints.push({ x: x, y: y });
+    }
+    
+    // ЧАСТЬ 2: Острый утес (высокий узкий пик)
+    const cliffStartX = waveEndX;
+    const cliffPeakX = cliffStartX + cliffWidth / 2;
+    const cliffEndX = cliffStartX + cliffWidth;
+    const cliffHeight = Math.min(60, canvas.height * 0.15); // Высокий пик
+    const cliffPeakY = baseY - cliffHeight;
+    
+    // Подъем к вершине (прямая линия)
+    const upSteps = 15;
+    for (let i = 1; i <= upSteps; i++) {
+        const t = i / upSteps;
+        const x = cliffStartX + t * (cliffWidth / 2);
+        const y = baseY + (cliffPeakY - baseY) * t;
+        pathPoints.push({ x: x, y: y });
+    }
+    
+    // Спуск от вершины (прямая линия)
+    const downSteps = 15;
+    for (let i = 1; i <= downSteps; i++) {
+        const t = i / downSteps;
+        const x = cliffPeakX + t * (cliffWidth / 2);
+        const y = cliffPeakY + (baseY - cliffPeakY) * t;
+        pathPoints.push({ x: x, y: y });
+    }
+    
+    // ЧАСТЬ 3: Прямоугольный меандр (ступенька: вверх → вправо → вниз)
+    const meanderStartX = cliffEndX;
+    const stepHeight = Math.min(40, canvas.height * 0.1);
+    const stepWidth = meanderWidth / 2; // Половина ширины на горизонталь
+    
+    let currentX = meanderStartX;
+    let currentY = baseY;
+    
+    // Отрезок ВВЕРХ
+    const upY = currentY - stepHeight;
+    const verticalSteps = Math.ceil(stepHeight / 3);
+    for (let i = 1; i <= verticalSteps; i++) {
+        const t = i / verticalSteps;
+        const x = currentX;
+        const y = currentY - t * stepHeight;
+        pathPoints.push({ x: x, y: y });
+    }
+    currentY = upY;
+    
+    // Отрезок ВПРАВО (горизонталь)
+    const rightX = currentX + stepWidth;
+    const horizontalSteps = Math.ceil(stepWidth / 3);
+    for (let i = 1; i <= horizontalSteps; i++) {
+        const t = i / horizontalSteps;
+        const x = currentX + t * stepWidth;
+        const y = currentY;
+        pathPoints.push({ x: x, y: y });
+    }
+    currentX = rightX;
+    
+    // Отрезок ВНИЗ
+    const downY = baseY;
+    const verticalSteps2 = Math.ceil(stepHeight / 3);
+    for (let i = 1; i <= verticalSteps2; i++) {
+        const t = i / verticalSteps2;
+        const x = currentX;
+        const y = currentY + t * stepHeight;
+        pathPoints.push({ x: x, y: y });
+    }
+    
+    // Рисуем фон дорожки (серая зона одинаковой ширины)
+    ctx.strokeStyle = '#e0e0e0';
+    ctx.lineWidth = Math.min(35, canvas.width * 0.08); // Одинаковая ширина по всей длине
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    
+    if (pathPoints.length > 0) {
+        ctx.moveTo(pathPoints[0].x, pathPoints[0].y);
+        for (let i = 1; i < pathPoints.length; i++) {
+            ctx.lineTo(pathPoints[i].x, pathPoints[i].y);
+        }
+    }
+    ctx.stroke();
+    
+    // Целевая траектория (пунктир)
+    ctx.strokeStyle = '#667eea';
+    ctx.lineWidth = 3;
+    ctx.setLineDash([10, 5]);
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
     ctx.beginPath();
     
     if (pathPoints.length > 0) {
