@@ -184,8 +184,8 @@ function getModuleExercises(moduleNum) {
               sequence: ['right', 'right', 'down', 'down', 'left', 'left', 'up', 'up'] },
             { title: 'Лесенка-гора', type: 'grid-mountain', instruction: 'Построй гору! Повтори 4 раза: (1 вправо, 1 вверх). А потом 4 раза: (1 вправо, 1 вниз)',
               sequence: ['right', 'up', 'right', 'up', 'right', 'up', 'right', 'up', 'right', 'down', 'right', 'down', 'right', 'down', 'right', 'down'] },
-            { title: 'Треугольная крыша', type: 'grid-triangle', instruction: 'Проведи: 3 вправо, 2 вверх-вправо, 2 вверх-влево, 3 влево', 
-              sequence: ['right', 'right', 'right', 'up', 'right', 'up', 'left', 'up', 'left', 'left', 'left'] },
+            { title: 'Цифровая змейка', type: 'grid-snake', instruction: 'Нарисуй змейку: 1 вправо, 1 вверх, 2 вправо, 1 вниз, 1 вправо, 2 вверх, 1 вправо, 2 вниз', 
+              sequence: ['right', 'up', 'right', 'right', 'down', 'right', 'up', 'up', 'right', 'down', 'down'] },
             { title: 'Лесенка вверх', type: 'grid-stairs', instruction: 'Проведи: вправо, вверх, вправо, вверх, вправо, вверх', 
               sequence: ['right', 'up', 'right', 'up', 'right', 'up'] },
             { title: 'Домик с крышей', type: 'grid-house', instruction: 'Нарисуй домик: основание и треугольную крышу', 
@@ -1552,6 +1552,7 @@ function drawExerciseTemplate(exercise) {
         // Модуль 6: Графические диктанты
         case 'grid-square':
         case 'grid-mountain':
+        case 'grid-snake':
         case 'grid-triangle':
         case 'grid-stairs':
         case 'grid-house':
@@ -3443,8 +3444,8 @@ function drawGridTemplate() {
     gridStartX = (canvas.width - totalGridWidth) / 2;
     gridStartY = (canvas.height - totalGridHeight) / 2;
     
-    // Для grid-mountain заливаем весь холст светло-зеленым
-    if (currentExercise && currentExercise.type === 'grid-mountain') {
+    // Для grid-mountain и grid-snake заливаем весь холст светло-зеленым
+    if (currentExercise && (currentExercise.type === 'grid-mountain' || currentExercise.type === 'grid-snake')) {
         ctx.fillStyle = '#f0fff0';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
@@ -3454,7 +3455,7 @@ function drawGridTemplate() {
     ctx.fillRect(gridStartX, gridStartY, totalGridWidth, totalGridHeight);
     
     // Рисуем линии сетки
-    if (currentExercise && currentExercise.type === 'grid-mountain') {
+    if (currentExercise && (currentExercise.type === 'grid-mountain' || currentExercise.type === 'grid-snake')) {
         ctx.strokeStyle = '#b2dfb2';
         ctx.lineWidth = 1;
     } else {
@@ -3485,6 +3486,28 @@ function drawGridTemplate() {
         // Для горки - 1 клетка от левого края, 80% от верха
         currentGridX = 1;
         currentGridY = Math.floor(gridRows * 0.8);
+    } else if (currentExercise && currentExercise.type === 'grid-snake') {
+        // Для змейки - рассчитываем безопасную стартовую позицию
+        // Траектория: 1 вправо → 1 вверх → 2 вправо → 1 вниз → 1 вправо → 2 вверх → 1 вправо → 2 вниз
+        // Максимальные смещения: вправо = 5, вверх = 2, вниз = 1 (итоговое смещение)
+        const maxRight = 5; // суммарное движение вправо
+        const maxUp = 2;    // максимальное движение вверх от стартовой точки
+        const maxDown = 1;  // итоговое смещение вниз от стартовой точки
+        
+        // Стартовая позиция: достаточно места справа и сверху/снизу
+        currentGridX = Math.max(2, Math.floor(gridCols * 0.25)); // 25% от левого края, минимум 2 клетки
+        currentGridY = Math.floor(gridRows * 0.4); // 40% от верха (ближе к верху, так как больше движений вверх)
+        
+        // Проверяем, что змейка поместится
+        if (currentGridX + maxRight >= gridCols) {
+            currentGridX = gridCols - maxRight - 1;
+        }
+        if (currentGridY - maxUp < 0) {
+            currentGridY = maxUp + 1;
+        }
+        if (currentGridY + maxDown >= gridRows) {
+            currentGridY = gridRows - maxDown - 1;
+        }
     } else {
         // Для остальных упражнений - в центре сетки
         currentGridX = Math.floor(gridCols / 2);
@@ -3499,6 +3522,9 @@ function drawGridTemplate() {
     const startPixelX = gridStartX + currentGridX * gridSize + gridSize / 2;
     const startPixelY = gridStartY + currentGridY * gridSize + gridSize / 2;
     gridPath.push({ x: startPixelX, y: startPixelY });
+    
+    // Для grid-snake НЕ рисуем подсветку целевых клеток (усложнение задачи)
+    // Ребенок должен видеть только пустую сетку и стартовую точку
     
     // Рисуем стартовую точку
     drawGridStartPoint();
@@ -3520,6 +3546,49 @@ function drawGridStartPoint() {
     ctx.beginPath();
     ctx.arc(startPixelX, startPixelY, 4, 0, Math.PI * 2);
     ctx.fill();
+}
+
+// Рисование подсветки целевых клеток для змейки
+function drawSnakeTargetCells() {
+    if (!currentExercise || currentExercise.type !== 'grid-snake') return;
+    
+    // Симулируем путь змейки для подсветки целевых клеток
+    let tempX = currentGridX;
+    let tempY = currentGridY;
+    
+    // Рисуем светло-зеленую подсветку для каждой целевой клетки
+    ctx.fillStyle = 'rgba(144, 238, 144, 0.4)'; // Светло-зеленый с прозрачностью
+    
+    // Подсвечиваем стартовую клетку
+    const startCellX = gridStartX + tempX * gridSize;
+    const startCellY = gridStartY + tempY * gridSize;
+    ctx.fillRect(startCellX + 1, startCellY + 1, gridSize - 2, gridSize - 2);
+    
+    // Проходим по всей траектории и подсвечиваем каждую клетку
+    for (let i = 0; i < targetSequence.length; i++) {
+        const direction = targetSequence[i];
+        
+        // Вычисляем следующую позицию
+        switch (direction) {
+            case 'up':
+                tempY--;
+                break;
+            case 'down':
+                tempY++;
+                break;
+            case 'left':
+                tempX--;
+                break;
+            case 'right':
+                tempX++;
+                break;
+        }
+        
+        // Подсвечиваем целевую клетку
+        const cellX = gridStartX + tempX * gridSize;
+        const cellY = gridStartY + tempY * gridSize;
+        ctx.fillRect(cellX + 1, cellY + 1, gridSize - 2, gridSize - 2);
+    }
 }
 
 // Движение в указанном направлении
@@ -3668,6 +3737,8 @@ function completeGridExercise() {
         message = '🎉 Квадрат готов! Отличная работа!';
     } else if (currentExercise && currentExercise.type === 'grid-mountain') {
         message = '🏔 Гора покорена! Ты настоящий альпинист!';
+    } else if (currentExercise && currentExercise.type === 'grid-snake') {
+        message = '🐍 Змейка готова! Отличная переключаемость внимания!';
     } else if (currentExercise && currentExercise.type === 'grid-triangle') {
         message = '🎉 Треугольник готов! Красивая крыша!';
     } else if (currentExercise && currentExercise.type === 'grid-stairs') {
@@ -3703,6 +3774,28 @@ function resetGridExercise() {
     if (currentExercise && currentExercise.type === 'grid-mountain') {
         currentGridX = 1;
         currentGridY = Math.floor(gridRows * 0.8);
+    } else if (currentExercise && currentExercise.type === 'grid-snake') {
+        // Для змейки - рассчитываем стартовую позицию с учетом новой траектории:
+        // 1 вправо → 1 вверх → 2 вправо → 1 вниз → 1 вправо → 2 вверх → 1 вправо → 2 вниз
+        // Максимальные смещения: вправо = 5, вверх = 2, вниз = 1 (итоговое смещение)
+        const maxRight = 5; // суммарное движение вправо
+        const maxUp = 2;    // максимальное движение вверх от стартовой точки
+        const maxDown = 1;  // итоговое смещение вниз от стартовой точки
+        
+        // Стартовая позиция: достаточно места справа и сверху/снизу
+        currentGridX = Math.max(2, Math.floor(gridCols * 0.25)); // 25% от левого края, минимум 2 клетки
+        currentGridY = Math.floor(gridRows * 0.4); // 40% от верха (ближе к верху, так как больше движений вверх)
+        
+        // Проверяем, что змейка поместится
+        if (currentGridX + maxRight >= gridCols) {
+            currentGridX = gridCols - maxRight - 1;
+        }
+        if (currentGridY - maxUp < 0) {
+            currentGridY = maxUp + 1;
+        }
+        if (currentGridY + maxDown >= gridRows) {
+            currentGridY = gridRows - maxDown - 1;
+        }
     } else {
         currentGridX = Math.floor(gridCols / 2);
         currentGridY = Math.floor(gridRows / 2);
