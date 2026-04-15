@@ -105,13 +105,14 @@ function loadModule(moduleNum) {
         if (!canvas) {
             initCanvas();
         } else {
+            // Пересчитываем размеры с учетом позиции кнопок
             resizeCanvas();
         }
         
         currentExercise = moduleExercises[currentExerciseIndex];
         displayExercise(currentExercise);
         startTime = Date.now();
-    }, 50);
+    }, 100); // Увеличена задержка до 100ms для надежности
 }
 
 // Получение упражнений модуля
@@ -247,6 +248,8 @@ function displayExercise(exercise) {
     completedSubTasks = []; // Пустой массив - никто ничего не провел
     
     if (canvas && ctx) {
+        // Пересчитываем размеры canvas перед отрисовкой
+        resizeCanvas();
         clearCanvas();
         drawExerciseTemplate(exercise);
     } else {
@@ -293,15 +296,32 @@ function initCanvas() {
 function resizeCanvas() {
     if (!canvas) return;
     
-    // Получаем размеры контейнера canvas
+    // Получаем контейнер canvas
     const container = canvas.parentElement;
     if (!container) return;
     
-    const rect = container.getBoundingClientRect();
-    canvas.width = rect.width;
-    canvas.height = rect.height;
+    // Получаем блок с кнопками управления
+    const controlsBlock = document.querySelector('.controls');
+    if (!controlsBlock) return;
     
-    console.log('Canvas resized:', canvas.width, 'x', canvas.height);
+    // Получаем позиции элементов
+    const containerRect = container.getBoundingClientRect();
+    const controlsRect = controlsBlock.getBoundingClientRect();
+    
+    // Безопасный отступ между canvas и кнопками (15px)
+    const safeMargin = 15;
+    
+    // Вычисляем доступную высоту: от верха контейнера до верха кнопок минус безопасный отступ
+    const availableHeight = controlsRect.top - containerRect.top - safeMargin;
+    
+    // Устанавливаем размеры canvas
+    // Ширина - по контейнеру
+    canvas.width = Math.floor(containerRect.width);
+    
+    // Высота - максимально доступная до кнопок
+    canvas.height = Math.floor(Math.max(availableHeight, 200)); // Минимум 200px для безопасности
+    
+    console.log('Canvas resized:', canvas.width, 'x', canvas.height, 'Available height:', availableHeight);
     
     // Перерисовываем шаблон после изменения размера
     if (currentExercise) {
@@ -560,8 +580,8 @@ function startDrawingPath(e) {
         
         if (currentExercise.type === 'path-lines') {
             // Прямые линии - используем те же относительные координаты, что и в drawPathLines
-            const linePositions = [0.15, 0.3, 0.45, 0.6, 0.75];
-            const startY = canvas.height * 0.25;
+            const linePositions = [0.15, 0.3, 0.45, 0.6, 0.85];
+            const startY = canvas.height * 0.35;
             
             for (let i = 0; i < totalSubTasks; i++) {
                 if (!completedSubTasks.includes(i)) {
@@ -579,8 +599,8 @@ function startDrawingPath(e) {
             }
         } else if (currentExercise.type === 'path-diagonal') {
             // Наклонные линии - используем те же относительные координаты, что и в drawPathDiagonal
-            const linePositions = [0.2, 0.35, 0.5, 0.65];
-            const topY = canvas.height * 0.3;
+            const linePositions = [0.2, 0.4, 0.6, 0.8];
+            const topY = canvas.height * 0.4;
             const bottomY = canvas.height * 0.55;
             
             // Проверяем 4 линии сверху
@@ -618,9 +638,9 @@ function startDrawingPath(e) {
             }
         } else if (currentExercise.type === 'path-circles') {
             // Круги - 6 кругов (3 слева в столбик, 3 справа в столбик)
-            const radius = Math.min(40, canvas.width * 0.08);
-            const leftX = canvas.width * 0.25;
-            const rightX = canvas.width * 0.75;
+            const radius = Math.min(28, canvas.width * 0.055);
+            const leftX = canvas.width * 0.28;
+            const rightX = canvas.width * 0.72;
             const topY = canvas.height * 0.25;
             const middleY = canvas.height * 0.5;
             const bottomY = canvas.height * 0.75;
@@ -651,13 +671,13 @@ function startDrawingPath(e) {
             }
         } else if (currentExercise.type === 'path-arcs') {
             // Дуги - 5 дуг по центру, смотрящих вниз
-            const radius = Math.min(45, canvas.width * 0.09);
+            const radius = Math.min(32, canvas.width * 0.065);
             const centerX = canvas.width * 0.5;
-            const topY1 = canvas.height * 0.15;
-            const topY2 = canvas.height * 0.3;
-            const topY3 = canvas.height * 0.45;
-            const topY4 = canvas.height * 0.6;
-            const topY5 = canvas.height * 0.75;
+            const topY1 = canvas.height * 0.18;
+            const topY2 = canvas.height * 0.33;
+            const topY3 = canvas.height * 0.5;
+            const topY4 = canvas.height * 0.67;
+            const topY5 = canvas.height * 0.82;
             
             // Проверяем 5 дуг (стартовая точка слева)
             const yPositions = [topY1, topY2, topY3, topY4, topY5];
@@ -812,9 +832,9 @@ function drawPathWithCheck(pos) {
         // Для упражнений с несколькими линиями - проверяем все финишные зоны
         if (currentExercise.type === 'path-lines') {
             // Прямые линии - используем те же относительные координаты, что и в drawPathLines
-            const linePositions = [0.15, 0.3, 0.45, 0.6, 0.75];
-            const lineLength = canvas.height * 0.5;
-            const startY = canvas.height * 0.25;
+            const linePositions = [0.15, 0.3, 0.45, 0.6, 0.85];
+            const lineLength = canvas.height * 0.3;
+            const startY = canvas.height * 0.35;
             
             for (let i = 0; i < totalSubTasks; i++) {
                 if (!completedSubTasks.includes(i)) {
@@ -833,11 +853,11 @@ function drawPathWithCheck(pos) {
             }
         } else if (currentExercise.type === 'path-diagonal') {
             // Наклонные линии - используем те же относительные координаты, что и в drawPathDiagonal
-            const linePositions = [0.2, 0.35, 0.5, 0.65];
-            const lineLength = canvas.height * 0.15;
-            const topY = canvas.height * 0.3;
+            const linePositions = [0.2, 0.4, 0.6, 0.8];
+            const lineLength = canvas.height * 0.1;
+            const topY = canvas.height * 0.4;
             const bottomY = canvas.height * 0.55;
-            const diagonalOffset = canvas.width * 0.08;
+            const diagonalOffset = canvas.width * 0.05;
             
             // Проверяем 4 линии сверху (наклон вправо)
             for (let i = 0; i < 4; i++) {
@@ -876,9 +896,9 @@ function drawPathWithCheck(pos) {
             }
         } else if (currentExercise.type === 'path-circles') {
             // Круги - проверяем возврат к стартовой точке (полный круг)
-            const radius = Math.min(40, canvas.width * 0.08);
-            const leftX = canvas.width * 0.25;
-            const rightX = canvas.width * 0.75;
+            const radius = Math.min(28, canvas.width * 0.055);
+            const leftX = canvas.width * 0.28;
+            const rightX = canvas.width * 0.72;
             const topY = canvas.height * 0.25;
             const middleY = canvas.height * 0.5;
             const bottomY = canvas.height * 0.75;
@@ -913,13 +933,13 @@ function drawPathWithCheck(pos) {
             }
         } else if (currentExercise.type === 'path-arcs') {
             // Дуги - 5 дуг по центру, смотрящих вниз
-            const radius = Math.min(45, canvas.width * 0.09);
+            const radius = Math.min(32, canvas.width * 0.065);
             const centerX = canvas.width * 0.5;
-            const topY1 = canvas.height * 0.15;
-            const topY2 = canvas.height * 0.3;
-            const topY3 = canvas.height * 0.45;
-            const topY4 = canvas.height * 0.6;
-            const topY5 = canvas.height * 0.75;
+            const topY1 = canvas.height * 0.18;
+            const topY2 = canvas.height * 0.33;
+            const topY3 = canvas.height * 0.5;
+            const topY4 = canvas.height * 0.67;
+            const topY5 = canvas.height * 0.82;
             
             // Проверяем 5 дуг (финиш справа)
             const yPositions = [topY1, topY2, topY3, topY4, topY5];
@@ -1041,9 +1061,9 @@ function completePathExercise() {
             
             if (currentExercise.type === 'path-lines') {
                 // Прямые линии - используем те же относительные координаты, что и в drawPathLines
-                const linePositions = [0.15, 0.3, 0.45, 0.6, 0.75];
-                const lineLength = canvas.height * 0.5;
-                const startY = canvas.height * 0.25;
+                const linePositions = [0.15, 0.3, 0.45, 0.6, 0.85];
+                const lineLength = canvas.height * 0.3;
+                const startY = canvas.height * 0.35;
                 
                 for (let i = 0; i < totalSubTasks; i++) {
                     if (!completedSubTasks.includes(i)) {
@@ -1062,11 +1082,11 @@ function completePathExercise() {
                 }
             } else if (currentExercise.type === 'path-diagonal') {
                 // Наклонные линии - используем те же относительные координаты, что и в drawPathDiagonal
-                const linePositions = [0.2, 0.35, 0.5, 0.65];
-                const lineLength = canvas.height * 0.15;
-                const topY = canvas.height * 0.3;
+                const linePositions = [0.2, 0.4, 0.6, 0.8];
+                const lineLength = canvas.height * 0.1;
+                const topY = canvas.height * 0.4;
                 const bottomY = canvas.height * 0.55;
-                const diagonalOffset = canvas.width * 0.08;
+                const diagonalOffset = canvas.width * 0.05;
                 
                 // Проверяем 4 линии сверху (наклон вправо)
                 for (let i = 0; i < 4; i++) {
@@ -1103,9 +1123,9 @@ function completePathExercise() {
                 }
             } else if (currentExercise.type === 'path-circles') {
                 // Круги
-                const radius = Math.min(40, canvas.width * 0.08);
-                const leftX = canvas.width * 0.25;
-                const rightX = canvas.width * 0.75;
+                const radius = Math.min(28, canvas.width * 0.055);
+                const leftX = canvas.width * 0.28;
+                const rightX = canvas.width * 0.72;
                 const topY = canvas.height * 0.25;
                 const middleY = canvas.height * 0.5;
                 const bottomY = canvas.height * 0.75;
@@ -1137,13 +1157,13 @@ function completePathExercise() {
                 }
             } else if (currentExercise.type === 'path-arcs') {
                 // Дуги - 5 дуг по центру, смотрящих вниз
-                const radius = Math.min(45, canvas.width * 0.09);
+                const radius = Math.min(32, canvas.width * 0.065);
                 const centerX = canvas.width * 0.5;
-                const topY1 = canvas.height * 0.15;
-                const topY2 = canvas.height * 0.3;
-                const topY3 = canvas.height * 0.45;
-                const topY4 = canvas.height * 0.6;
-                const topY5 = canvas.height * 0.75;
+                const topY1 = canvas.height * 0.18;
+                const topY2 = canvas.height * 0.33;
+                const topY3 = canvas.height * 0.5;
+                const topY4 = canvas.height * 0.67;
+                const topY5 = canvas.height * 0.82;
                 
                 // Проверяем 5 дуг (финиш справа)
                 const yPositions = [topY1, topY2, topY3, topY4, topY5];
@@ -1440,7 +1460,7 @@ function drawCenterTarget() {
 
 function drawTopTarget() {
     const cx = canvas.width / 2;
-    const cy = canvas.height * 0.2;
+    const cy = canvas.height * 0.25; // Поднимаем выше - 25% от верха
     
     targetZone = { x: cx, y: cy, radius: 50 };
     
@@ -1477,7 +1497,7 @@ function drawTopTarget() {
 
 function drawBottomTarget() {
     const cx = canvas.width / 2;
-    const cy = canvas.height * 0.8;
+    const cy = canvas.height * 0.75; // Опускаем ниже - 75% от верха
     
     targetZone = { x: cx, y: cy, radius: 50 };
     
@@ -1513,7 +1533,7 @@ function drawBottomTarget() {
 }
 
 function drawLeftTarget() {
-    const cx = canvas.width * 0.2;
+    const cx = canvas.width * 0.25; // Сдвигаем ближе к краю - 25% от левого края
     const cy = canvas.height / 2;
     
     targetZone = { x: cx, y: cy, radius: 50 };
@@ -1550,7 +1570,7 @@ function drawLeftTarget() {
 }
 
 function drawRightTarget() {
-    const cx = canvas.width * 0.8;
+    const cx = canvas.width * 0.75; // Сдвигаем ближе к краю - 75% от левого края
     const cy = canvas.height / 2;
     
     targetZone = { x: cx, y: cy, radius: 50 };
@@ -1590,10 +1610,12 @@ function drawRightTarget() {
 // МОДУЛЬ 2: ОТРИСОВКА ДОРОЖЕК
 // ============================================
 
-// Прямая горизонтальная дорожка
+// Прямая горизонтальная дорожка - центрированная
 function drawStraightPath() {
-    const startX = 50;
-    const endX = canvas.width - 50;
+    // Центрированная прямая дорожка с увеличенными отступами
+    const totalWidth = canvas.width * 0.7; // 70% от ширины экрана
+    const startX = (canvas.width - totalWidth) / 2; // Центрируем
+    const endX = startX + totalWidth;
     const y = canvas.height / 2;
     
     pathPoints = [];
@@ -1603,7 +1625,7 @@ function drawStraightPath() {
     
     // Фон дорожки (широкая серая линия)
     ctx.strokeStyle = '#e0e0e0';
-    ctx.lineWidth = 40;
+    ctx.lineWidth = Math.min(35, canvas.width * 0.08); // Адаптивная толщина
     ctx.lineCap = 'round';
     ctx.beginPath();
     ctx.moveTo(startX, y);
@@ -1635,11 +1657,13 @@ function drawStraightPath() {
     ctx.stroke();
 }
 
-// Вертикальная дорожка (столбик)
+// Вертикальная дорожка (столбик) - центрированная
 function drawVerticalPath() {
-    const x = canvas.width / 2;
-    const startY = canvas.height - 50;
-    const endY = 50;
+    const x = canvas.width / 2; // Уже центрирована
+    // Центрированная вертикальная дорожка с увеличенными отступами
+    const totalHeight = canvas.height * 0.6; // 60% от высоты экрана
+    const startY = canvas.height - (canvas.height - totalHeight) / 2 - totalHeight * 0.1; // Немного выше центра
+    const endY = startY - totalHeight;
     
     pathPoints = [];
     for (let y = startY; y >= endY; y -= 5) {
@@ -1648,7 +1672,7 @@ function drawVerticalPath() {
     
     // Фон дорожки
     ctx.strokeStyle = '#e0e0e0';
-    ctx.lineWidth = 40;
+    ctx.lineWidth = Math.min(35, canvas.width * 0.08); // Адаптивная толщина
     ctx.lineCap = 'round';
     ctx.beginPath();
     ctx.moveTo(x, startY);
@@ -1682,12 +1706,14 @@ function drawVerticalPath() {
 
 // Зигзаг (кочки)
 function drawZigzagPath() {
-    const startX = 50;
-    const endX = canvas.width - 50;
+    // Центрированный зигзаг с увеличенными отступами
+    const totalWidth = canvas.width * 0.7; // 70% от ширины экрана
+    const startX = (canvas.width - totalWidth) / 2; // Центрируем
+    const endX = startX + totalWidth;
     const centerY = canvas.height / 2;
-    const amplitude = 60;
-    const segments = 5;
-    const segmentWidth = (endX - startX) / segments;
+    const amplitude = Math.min(50, canvas.height * 0.12); // Адаптивная амплитуда
+    const segments = 4; // Уменьшено количество сегментов
+    const segmentWidth = totalWidth / segments;
     
     pathPoints = [];
     
@@ -1719,7 +1745,7 @@ function drawZigzagPath() {
     
     // Рисуем фон дорожки
     ctx.strokeStyle = '#e0e0e0';
-    ctx.lineWidth = 40;
+    ctx.lineWidth = Math.min(35, canvas.width * 0.08); // Адаптивная толщина
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     ctx.beginPath();
@@ -1763,19 +1789,21 @@ function drawZigzagPath() {
     ctx.stroke();
 }
 
-// Волнистая дорожка
+// Волнистая дорожка - центрированная
 function drawWavePath() {
-    const startX = 50;
-    const endX = canvas.width - 50;
+    // Центрированная волнистая дорожка с увеличенными отступами
+    const totalWidth = canvas.width * 0.7; // 70% от ширины экрана
+    const startX = (canvas.width - totalWidth) / 2; // Центрируем
+    const endX = startX + totalWidth;
     const centerY = canvas.height / 2;
-    const amplitude = 40;
-    const frequency = 0.02;
+    const amplitude = Math.min(35, canvas.height * 0.08); // Адаптивная амплитуда
+    const frequency = 0.025; // Немного увеличена частота
     
     pathPoints = [];
     
     // Фон дорожки
     ctx.strokeStyle = '#e0e0e0';
-    ctx.lineWidth = 40;
+    ctx.lineWidth = Math.min(35, canvas.width * 0.08); // Адаптивная толщина
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     ctx.beginPath();
@@ -1905,11 +1933,11 @@ function drawSpiralPath() {
 
 // Прямые линии - 5 вертикальных линий на одном экране (адаптировано для мобильных)
 function drawPathLines() {
-    // Относительные координаты для равномерного распределения 5 линий
-    const linePositions = [0.15, 0.3, 0.45, 0.6, 0.75]; // 5 позиций по ширине экрана
-    const lineLength = canvas.height * 0.5; // Длина линии - 50% от высоты экрана
-    const startY = canvas.height * 0.25; // Начало линии - 25% от верха
-    const lineWidth = Math.min(35, canvas.width * 0.08); // Адаптивная толщина линии
+    // Центрированное распределение 5 линий с увеличенными отступами
+    const linePositions = [0.15, 0.3, 0.45, 0.6, 0.85]; // Более широкое распределение
+    const lineLength = canvas.height * 0.3; // Уменьшенная длина линии - 30% от высоты экрана
+    const startY = canvas.height * 0.35; // Спускаем ниже - 35% от верха (центрирование)
+    const lineWidth = Math.min(25, canvas.width * 0.05); // Уменьшенная толщина линии
     
     pathPoints = [];
     
@@ -2009,12 +2037,12 @@ function drawPathLines() {
 
 // Наклонные линии - 4 линии вправо сверху + 4 линии влево снизу (адаптировано для мобильных)
 function drawPathDiagonal() {
-    // Относительные координаты для равномерного распределения 4 линий в ряду
-    const linePositions = [0.2, 0.35, 0.5, 0.65]; // 4 позиции по ширине экрана
-    const lineLength = canvas.height * 0.15; // Длина линии - 15% от высоты экрана
-    const topY = canvas.height * 0.3; // Верхние линии - 30% от верха
-    const bottomY = canvas.height * 0.55; // Нижние линии - 55% от верха
-    const diagonalOffset = canvas.width * 0.08; // Смещение по диагонали - 8% от ширины
+    // Центрированное распределение 4 линий в ряду с увеличенными отступами
+    const linePositions = [0.2, 0.4, 0.6, 0.8]; // Более широкое распределение
+    const lineLength = canvas.height * 0.1; // Уменьшенная длина линии - 10% от высоты экрана
+    const topY = canvas.height * 0.4; // Верхние линии - 40% от верха (спускаем в центр)
+    const bottomY = canvas.height * 0.55; // Нижние линии - 55% от верха (спускаем в центр)
+    const diagonalOffset = canvas.width * 0.05; // Уменьшенное смещение по диагонали - 5% от ширины
     
     pathPoints = [];
     
@@ -2052,7 +2080,7 @@ function drawPathDiagonal() {
     }
     
     // Адаптивная толщина линий и размер точек
-    const lineWidth = Math.min(30, canvas.width * 0.06);
+    const lineWidth = Math.min(20, canvas.width * 0.04);
     const pointSize = Math.min(12, canvas.width * 0.025);
     
     // Рисуем все 8 линий
@@ -2199,15 +2227,17 @@ function drawPathDiagonal() {
     }
 }
 
-// Круги - 6 кругов (3 слева в столбик, 3 справа в столбик)
+// Круги - 6 кругов (3 слева в столбик, 3 справа в столбик) с увеличенными отступами
 function drawPathCircles() {
     // Адаптивные размеры для мобильных устройств
-    const radius = Math.min(40, canvas.width * 0.08); // Радиус круга
-    const leftX = canvas.width * 0.25; // Левая колонка - 25% от ширины
-    const rightX = canvas.width * 0.75; // Правая колонка - 75% от ширины
-    const topY = canvas.height * 0.25; // Верхний круг - 25% от высоты
-    const middleY = canvas.height * 0.5; // Средний круг - 50% от высоты
-    const bottomY = canvas.height * 0.75; // Нижний круг - 75% от высоты
+    const radius = Math.min(28, canvas.width * 0.055); // Немного уменьшенный радиус
+    const leftX = canvas.width * 0.28; // Сдвинуты ближе к центру
+    const rightX = canvas.width * 0.72; // Сдвинуты ближе к центру
+    
+    // Увеличенные отступы между кругами по вертикали
+    const topY = canvas.height * 0.25;    // Верхний круг
+    const middleY = canvas.height * 0.5;  // Средний круг
+    const bottomY = canvas.height * 0.75; // Нижний круг
     
     pathPoints = [];
     
@@ -2244,7 +2274,7 @@ function drawPathCircles() {
         
         // Фон круга (широкая серая линия)
         ctx.strokeStyle = isCompleted ? '#c8e6c9' : '#e0e0e0';
-        ctx.lineWidth = Math.min(25, canvas.width * 0.04);
+        ctx.lineWidth = Math.min(16, canvas.width * 0.028); // Уменьшенная толщина
         ctx.beginPath();
         ctx.arc(cx, cy, radius, 0, Math.PI * 2);
         ctx.stroke();
@@ -2291,18 +2321,18 @@ function drawPathCircles() {
     }
 }
 
-// Дуги - 5 дуг по центру, смотрящих вниз
+// Дуги - 5 дуг по центру, смотрящих вниз, с увеличенными отступами
 function drawPathArcs() {
     // Адаптивные размеры для мобильных устройств
-    const radius = Math.min(45, canvas.width * 0.09);
+    const radius = Math.min(32, canvas.width * 0.065); // Немного уменьшенный радиус
     const centerX = canvas.width * 0.5; // Центр экрана
     
-    // Позиции 5 дуг в столбик по центру
-    const topY1 = canvas.height * 0.15;    // Первая дуга
-    const topY2 = canvas.height * 0.3;     // Вторая дуга
-    const topY3 = canvas.height * 0.45;    // Третья дуга
-    const topY4 = canvas.height * 0.6;     // Четвертая дуга
-    const topY5 = canvas.height * 0.75;    // Пятая дуга
+    // Позиции 5 дуг в столбик по центру с увеличенными отступами
+    const topY1 = canvas.height * 0.18;    // Первая дуга (выше)
+    const topY2 = canvas.height * 0.33;    // Вторая дуга
+    const topY3 = canvas.height * 0.5;     // Третья дуга (центр)
+    const topY4 = canvas.height * 0.67;    // Четвертая дуга
+    const topY5 = canvas.height * 0.82;    // Пятая дуга (ниже)
     
     pathPoints = [];
     
@@ -2324,7 +2354,7 @@ function drawPathArcs() {
         }
     }
     
-    const lineWidth = Math.min(30, canvas.width * 0.05);
+    const lineWidth = Math.min(18, canvas.width * 0.035); // Немного уменьшенная толщина
     const pointSize = Math.min(12, canvas.width * 0.025);
     
     // Рисуем все 5 дуг (смотрят вниз)

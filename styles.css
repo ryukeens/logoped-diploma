@@ -181,7 +181,6 @@ header h1 {
     flex-direction: column;
     height: 100%;
     overflow: hidden;
-    padding-bottom: 68px; /* Отступ для фиксированных кнопок */
 }
 
 .exercise-header {
@@ -219,6 +218,7 @@ header h1 {
     position: relative;
     overflow: hidden;
     min-height: 0; /* Важно для flex */
+    margin-bottom: 0; /* Убираем отступ, будем управлять через JS */
 }
 
 #canvas {
@@ -459,8 +459,8 @@ header h1 {
         min-height: 44px;
     }
     
-    #exercise-screen {
-        padding-bottom: 66px; /* Отступ для фиксированных кнопок на мобильных */
+    .canvas-container {
+        margin-bottom: 0; /* Убираем отступ на мобильных */
     }
     
     .feedback {
@@ -498,7 +498,7 @@ header h1 {
         padding: 10px;
     }
     
-    #exercise-screen {
-        padding-bottom: 60px; /* Отступ для фиксированных кнопок на очень маленьких экранах */
+    .canvas-container {
+        margin-bottom: 0; /* Убираем отступ на очень маленьких экранах */
     }
 }
