@@ -88,6 +88,33 @@
                 <button class="control-btn" onclick="showHint()">💡 Подсказка</button>
                 <button class="control-btn primary" onclick="nextExercise()">Дальше →</button>
             </div>
+            
+            <!-- Кнопки управления для Модуля 6 (Графические диктанты) -->
+            <div class="grid-controls hidden" id="grid-controls">
+                <div class="arrow-buttons">
+                    <button class="arrow-btn" id="btn-up" onclick="moveDirection('up')">
+                        <span class="arrow">↑</span>
+                    </button>
+                    <div class="arrow-row">
+                        <button class="arrow-btn" id="btn-left" onclick="moveDirection('left')">
+                            <span class="arrow">←</span>
+                        </button>
+                        <button class="arrow-btn" id="btn-right" onclick="moveDirection('right')">
+                            <span class="arrow">→</span>
+                        </button>
+                    </div>
+                    <button class="arrow-btn" id="btn-down" onclick="moveDirection('down')">
+                        <span class="arrow">↓</span>
+                    </button>
+                </div>
+                <div class="grid-info">
+                    <div class="step-counter">Шаг: <span id="current-step">0</span> из <span id="total-steps">0</span></div>
+                </div>
+                <div class="grid-action-row">
+                    <button class="control-btn secondary" onclick="resetGridExercise()">🔄 Сначала</button>
+                    <button id="next-level-btn" class="control-btn primary hidden" onclick="nextExercise()">Дальше →</button>
+                </div>
+            </div>
             <div id="feedback" class="feedback hidden"></div>
         </div>
 

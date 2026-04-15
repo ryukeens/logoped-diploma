@@ -26,6 +26,16 @@ let currentSubTask = 0; // Текущая подзадача
 let totalSubTasks = 0; // Всего подзадач
 let completedSubTasks = []; // Массив завершенных подзадач (какие линии реально провел пользователь)
 
+// Переменные для Модуля 6 (Графические диктанты)
+let gridSize = 30; // Размер клетки в пикселях
+let gridStartX = 0; // Начальная позиция по X
+let gridStartY = 0; // Начальная позиция по Y
+let currentGridX = 0; // Текущая позиция по X в сетке
+let currentGridY = 0; // Текущая позиция по Y в сетке
+let userSequence = []; // Последовательность шагов пользователя
+let targetSequence = []; // Целевая последовательность
+let gridPath = []; // Путь пользователя в координатах canvas
+
 // Загрузка статистики из localStorage
 function loadStats() {
     const saved = localStorage.getItem('graphomotorStats');
@@ -49,6 +59,11 @@ document.addEventListener('DOMContentLoaded', () => {
 function showMainMenu() {
     hideAllScreens();
     document.querySelector('.main-menu').classList.remove('hidden');
+    // Скрываем все элементы управления
+    const regularControls = document.querySelector('.controls');
+    const gridControls = document.getElementById('grid-controls');
+    if (regularControls) regularControls.classList.remove('hidden');
+    if (gridControls) gridControls.classList.add('hidden');
     // Разрешаем скролл в меню
     document.body.style.overflow = 'auto';
 }
@@ -56,6 +71,11 @@ function showMainMenu() {
 function showExercises() {
     hideAllScreens();
     document.getElementById('exercises-menu').classList.remove('hidden');
+    // Скрываем все элементы управления
+    const regularControls = document.querySelector('.controls');
+    const gridControls = document.getElementById('grid-controls');
+    if (regularControls) regularControls.classList.remove('hidden');
+    if (gridControls) gridControls.classList.add('hidden');
     // Разрешаем скролл в меню выбора упражнений
     document.body.style.overflow = 'auto';
 }
@@ -151,8 +171,16 @@ function getModuleExercises(moduleNum) {
             { title: 'Дострой фигуру', type: 'complete', instruction: 'Дорисуй вторую половину' }
         ],
         6: [
-            { title: 'Графический диктант', type: 'dictation', instruction: 'Следуй стрелкам' },
-            { title: 'Маршрут по клеткам', type: 'grid', instruction: 'Пройди по клеткам: вверх, вправо, вниз' }
+            { title: 'Квадратное окошко', type: 'grid-square', instruction: 'Проведи: 2 клетки вправо, 2 вниз, 2 влево, 2 вверх', 
+              sequence: ['right', 'right', 'down', 'down', 'left', 'left', 'up', 'up'] },
+            { title: 'Лесенка-гора', type: 'grid-mountain', instruction: 'Построй гору! Повтори 4 раза: (1 вправо, 1 вверх). А потом 4 раза: (1 вправо, 1 вниз)',
+              sequence: ['right', 'up', 'right', 'up', 'right', 'up', 'right', 'up', 'right', 'down', 'right', 'down', 'right', 'down', 'right', 'down'] },
+            { title: 'Треугольная крыша', type: 'grid-triangle', instruction: 'Проведи: 3 вправо, 2 вверх-вправо, 2 вверх-влево, 3 влево', 
+              sequence: ['right', 'right', 'right', 'up', 'right', 'up', 'left', 'up', 'left', 'left', 'left'] },
+            { title: 'Лесенка вверх', type: 'grid-stairs', instruction: 'Проведи: вправо, вверх, вправо, вверх, вправо, вверх', 
+              sequence: ['right', 'up', 'right', 'up', 'right', 'up'] },
+            { title: 'Домик с крышей', type: 'grid-house', instruction: 'Нарисуй домик: основание и треугольную крышу', 
+              sequence: ['right', 'right', 'right', 'up', 'up', 'right', 'up', 'left', 'up', 'left', 'down', 'left', 'left', 'down', 'down'] }
         ],
         7: [
             { title: 'Найди ошибку', type: 'find-error', instruction: 'Найди неправильный элемент' },
@@ -190,6 +218,12 @@ function nextExercise() {
 
 // Выход из упражнения
 function exitExercise() {
+    // Скрываем все элементы управления
+    const regularControls = document.querySelector('.controls');
+    const gridControls = document.getElementById('grid-controls');
+    regularControls.classList.remove('hidden');
+    gridControls.classList.add('hidden');
+    
     showExercises();
     // Разрешаем скролл при выходе из упражнения
     document.body.style.overflow = 'auto';
@@ -249,6 +283,34 @@ function displayExercise(exercise) {
     currentSubTask = 0;
     totalSubTasks = exercise.subTasks || 0;
     completedSubTasks = []; // Пустой массив - никто ничего не провел
+    
+    // Сброс переменных для Модуля 6 (Графические диктанты)
+    userSequence = [];
+    targetSequence = exercise.sequence || [];
+    gridPath = [];
+    currentGridX = 0;
+    currentGridY = 0;
+    
+    // Показываем/скрываем соответствующие элементы управления
+    const regularControls = document.querySelector('.controls');
+    const gridControls = document.getElementById('grid-controls');
+    
+    if (exercise.type && exercise.type.startsWith('grid-')) {
+        // Модуль 6: показываем кнопки-стрелки, скрываем обычные кнопки
+        regularControls.classList.add('hidden');
+        gridControls.classList.remove('hidden');
+        
+        // Скрываем кнопку "Дальше" при инициализации
+        document.getElementById('next-level-btn').classList.add('hidden');
+        
+        // Обновляем счетчик шагов
+        document.getElementById('current-step').textContent = '0';
+        document.getElementById('total-steps').textContent = targetSequence.length.toString();
+    } else {
+        // Другие модули: показываем обычные кнопки, скрываем стрелки
+        regularControls.classList.remove('hidden');
+        gridControls.classList.add('hidden');
+    }
     
     if (canvas && ctx) {
         // Пересчитываем размеры canvas перед отрисовкой
@@ -1474,6 +1536,14 @@ function drawExerciseTemplate(exercise) {
             break;
         case 'combined-chain':
             drawCombinedChain();
+            break;
+        
+        // Модуль 6: Графические диктанты
+        case 'grid-square':
+        case 'grid-triangle':
+        case 'grid-stairs':
+        case 'grid-house':
+            drawGridTemplate();
             break;
         
         // Другие модули
@@ -3340,4 +3410,295 @@ function drawDefaultTemplate() {
     ctx.font = '20px Arial';
     ctx.textAlign = 'center';
     ctx.fillText('Упражнение в разработке', canvas.width / 2, canvas.height / 2);
+}
+
+// ============================================
+// МОДУЛЬ 6: ГРАФИЧЕСКИЕ ДИКТАНТЫ
+// ============================================
+
+// Рисование сетки для графических диктантов
+function drawGridTemplate() {
+    // Вычисляем размер клетки адаптивно (минимум 10 клеток по ширине)
+    gridSize = Math.min(30, Math.floor(canvas.width / 10));
+    
+    // Вычисляем количество клеток по горизонтали и вертикали
+    const gridCols = Math.floor(canvas.width / gridSize);
+    const gridRows = Math.floor(canvas.height / gridSize);
+    
+    // Центрируем сетку
+    const totalGridWidth = gridCols * gridSize;
+    const totalGridHeight = gridRows * gridSize;
+    gridStartX = (canvas.width - totalGridWidth) / 2;
+    gridStartY = (canvas.height - totalGridHeight) / 2;
+    
+    // Для grid-mountain заливаем весь холст светло-зеленым
+    if (currentExercise && currentExercise.type === 'grid-mountain') {
+        ctx.fillStyle = '#f0fff0';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+    
+    // Рисуем фон сетки (светло-зеленый как в школьной тетради)
+    ctx.fillStyle = '#e8f5e9';
+    ctx.fillRect(gridStartX, gridStartY, totalGridWidth, totalGridHeight);
+    
+    // Рисуем линии сетки
+    if (currentExercise && currentExercise.type === 'grid-mountain') {
+        ctx.strokeStyle = '#b2dfb2';
+        ctx.lineWidth = 1;
+    } else {
+        ctx.strokeStyle = '#c8e6c9';
+        ctx.lineWidth = 1;
+    }
+    
+    // Вертикальные линии
+    for (let i = 0; i <= gridCols; i++) {
+        const x = gridStartX + i * gridSize;
+        ctx.beginPath();
+        ctx.moveTo(x, gridStartY);
+        ctx.lineTo(x, gridStartY + totalGridHeight);
+        ctx.stroke();
+    }
+    
+    // Горизонтальные линии
+    for (let i = 0; i <= gridRows; i++) {
+        const y = gridStartY + i * gridSize;
+        ctx.beginPath();
+        ctx.moveTo(gridStartX, y);
+        ctx.lineTo(gridStartX + totalGridWidth, y);
+        ctx.stroke();
+    }
+    
+    // Устанавливаем стартовую позицию
+    if (currentExercise && currentExercise.type === 'grid-mountain') {
+        // Для горки - 1 клетка от левого края, 80% от верха
+        currentGridX = 1;
+        currentGridY = Math.floor(gridRows * 0.8);
+    } else {
+        // Для остальных упражнений - в центре сетки
+        currentGridX = Math.floor(gridCols / 2);
+        currentGridY = Math.floor(gridRows / 2);
+    }
+    
+    // Очищаем путь пользователя
+    gridPath = [];
+    userSequence = [];
+    
+    // Добавляем стартовую точку в путь
+    const startPixelX = gridStartX + currentGridX * gridSize + gridSize / 2;
+    const startPixelY = gridStartY + currentGridY * gridSize + gridSize / 2;
+    gridPath.push({ x: startPixelX, y: startPixelY });
+    
+    // Рисуем стартовую точку
+    drawGridStartPoint();
+}
+
+// Рисование стартовой точки
+function drawGridStartPoint() {
+    const startPixelX = gridStartX + currentGridX * gridSize + gridSize / 2;
+    const startPixelY = gridStartY + currentGridY * gridSize + gridSize / 2;
+    
+    // Жирная черная точка
+    ctx.fillStyle = '#000000';
+    ctx.beginPath();
+    ctx.arc(startPixelX, startPixelY, 8, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Белый центр для контраста
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(startPixelX, startPixelY, 4, 0, Math.PI * 2);
+    ctx.fill();
+}
+
+// Движение в указанном направлении
+function moveDirection(direction) {
+    if (exerciseCompleted) return;
+    
+    // Проверяем, не превышен ли лимит шагов
+    if (userSequence.length >= targetSequence.length) {
+        return;
+    }
+    
+    // Проверяем правильность шага
+    const expectedDirection = targetSequence[userSequence.length];
+    if (direction !== expectedDirection) {
+        // Неправильный шаг - показываем специальное сообщение для горы
+        if (currentExercise && currentExercise.type === 'grid-mountain') {
+            showGridMountainError();
+        } else {
+            showGridError();
+        }
+        return;
+    }
+    
+    // Сохраняем текущую позицию
+    const oldX = currentGridX;
+    const oldY = currentGridY;
+    
+    // Вычисляем новую позицию
+    let newX = currentGridX;
+    let newY = currentGridY;
+    
+    switch (direction) {
+        case 'up':
+            newY--;
+            break;
+        case 'down':
+            newY++;
+            break;
+        case 'left':
+            newX--;
+            break;
+        case 'right':
+            newX++;
+            break;
+    }
+    
+    // Проверяем границы сетки
+    const gridCols = Math.floor(canvas.width / gridSize);
+    const gridRows = Math.floor(canvas.height / gridSize);
+    
+    if (newX < 0 || newX >= gridCols || newY < 0 || newY >= gridRows) {
+        // Выход за границы сетки
+        showGridError();
+        return;
+    }
+    
+    // Обновляем позицию
+    currentGridX = newX;
+    currentGridY = newY;
+    
+    // Добавляем шаг в последовательность пользователя
+    userSequence.push(direction);
+    
+    // Рисуем линию от старой позиции к новой
+    drawGridLine(oldX, oldY, newX, newY);
+    
+    // Добавляем новую точку в путь
+    const newPixelX = gridStartX + newX * gridSize + gridSize / 2;
+    const newPixelY = gridStartY + newY * gridSize + gridSize / 2;
+    gridPath.push({ x: newPixelX, y: newPixelY });
+    
+    // Обновляем счетчик шагов
+    document.getElementById('current-step').textContent = userSequence.length.toString();
+    
+    // Проверяем завершение упражнения
+    if (userSequence.length === targetSequence.length) {
+        completeGridExercise();
+    }
+}
+
+// Рисование линии между клетками
+function drawGridLine(fromX, fromY, toX, toY) {
+    const fromPixelX = gridStartX + fromX * gridSize + gridSize / 2;
+    const fromPixelY = gridStartY + fromY * gridSize + gridSize / 2;
+    const toPixelX = gridStartX + toX * gridSize + gridSize / 2;
+    const toPixelY = gridStartY + toY * gridSize + gridSize / 2;
+    
+    // Жирная черная линия
+    ctx.strokeStyle = '#000000';
+    // Для grid-mountain используем толщину 3px, для остальных 4px
+    if (currentExercise && currentExercise.type === 'grid-mountain') {
+        ctx.lineWidth = 3;
+    } else {
+        ctx.lineWidth = 4;
+    }
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(fromPixelX, fromPixelY);
+    ctx.lineTo(toPixelX, toPixelY);
+    ctx.stroke();
+}
+
+// Показ ошибки для упражнения "Лесенка-горка"
+function showGridMountainError() {
+    const feedback = document.getElementById('feedback');
+    feedback.textContent = '🎯 Сбился с ритма! Посмотри на схему еще раз';
+    feedback.className = 'feedback error';
+    feedback.classList.remove('hidden');
+    
+    // Вибрация при ошибке
+    vibrateDevice();
+    
+    // Через 2 секунды сбрасываем упражнение
+    setTimeout(() => {
+        resetGridExercise();
+        feedback.classList.add('hidden');
+    }, 2000);
+}
+
+// Показ ошибки
+function showGridError() {
+    const feedback = document.getElementById('feedback');
+    feedback.textContent = '❌ Ой, не туда! Попробуй еще раз';
+    feedback.className = 'feedback error';
+    feedback.classList.remove('hidden');
+    
+    // Вибрация при ошибке
+    vibrateDevice();
+    
+    // Через 1.5 секунды сбрасываем упражнение
+    setTimeout(() => {
+        resetGridExercise();
+        feedback.classList.add('hidden');
+    }, 1500);
+}
+
+// Завершение упражнения
+function completeGridExercise() {
+    exerciseCompleted = true;
+    
+    const feedback = document.getElementById('feedback');
+    
+    // Специальные сообщения для разных упражнений
+    let message = '🎉 Отлично! Фигура готова!';
+    if (currentExercise && currentExercise.type === 'grid-square') {
+        message = '🎉 Квадрат готов! Отличная работа!';
+    } else if (currentExercise && currentExercise.type === 'grid-mountain') {
+        message = '🏔 Гора покорена! Ты настоящий альпинист!';
+    } else if (currentExercise && currentExercise.type === 'grid-triangle') {
+        message = '🎉 Треугольник готов! Красивая крыша!';
+    } else if (currentExercise && currentExercise.type === 'grid-stairs') {
+        message = '🎉 Лесенка готова! Можно подниматься!';
+    } else if (currentExercise && currentExercise.type === 'grid-house') {
+        message = '🎉 Домик готов! Отличная архитектура!';
+    }
+    
+    feedback.textContent = message;
+    feedback.className = 'feedback';
+    feedback.classList.remove('hidden');
+    
+    // Показываем кнопку "Дальше" для ручного перехода
+    document.getElementById('next-level-btn').classList.remove('hidden');
+}
+
+// Сброс упражнения
+function resetGridExercise() {
+    if (exerciseCompleted) return;
+    
+    // Очищаем canvas и перерисовываем сетку
+    clearCanvas();
+    drawExerciseTemplate(currentExercise);
+    
+    // Сбрасываем состояние
+    userSequence = [];
+    gridPath = [];
+    
+    // Сбрасываем позицию в зависимости от типа упражнения
+    const gridCols = Math.floor(canvas.width / gridSize);
+    const gridRows = Math.floor(canvas.height / gridSize);
+    
+    if (currentExercise && currentExercise.type === 'grid-mountain') {
+        currentGridX = 1;
+        currentGridY = Math.floor(gridRows * 0.8);
+    } else {
+        currentGridX = Math.floor(gridCols / 2);
+        currentGridY = Math.floor(gridRows / 2);
+    }
+    
+    // Скрываем кнопку "Дальше"
+    document.getElementById('next-level-btn').classList.add('hidden');
+    
+    // Обновляем счетчик
+    document.getElementById('current-step').textContent = '0';
 }
