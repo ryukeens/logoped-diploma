@@ -140,8 +140,8 @@ function getModuleExercises(moduleNum) {
             { title: 'Пружинка', type: 'path-loops', instruction: 'Обведи волнистые линии слева направо', subTasks: 3 }
         ],
         4: [
-            { title: 'Продолжи узор', type: 'pattern', instruction: 'Продолжи последовательность элементов' },
-            { title: 'Чередование', type: 'alternating', instruction: 'Чередуй короткие и длинные линии' }
+            { title: 'Ритмичный заборчик', type: 'rhythmic-fence', instruction: 'Веди пальцем по зигзагу, чередуя высоту зубьев' },
+            { title: 'Волна и утес', type: 'wave-cliff', instruction: 'Чередуй плавные волны и резкие углы' }
         ],
         5: [
             { title: 'Повтори узор', type: 'copy', instruction: 'Повтори узор справа' },
@@ -364,10 +364,14 @@ function handleCanvasTouch(e) {
     if (currentExercise && currentExercise.type.startsWith('point-')) {
         checkPointPlacement(pos);
     } 
-    // Модуль 2: Дорожки
+    // Модуль 2 и 3: Дорожки
     else if (currentExercise && currentExercise.type.startsWith('path-')) {
         startDrawingPath(e);
-    } 
+    }
+    // Модуль 4: Серийность движений (используют механизм дорожек)
+    else if (currentExercise && (currentExercise.type === 'rhythmic-fence' || currentExercise.type === 'wave-cliff')) {
+        startDrawingPath(e);
+    }
     else {
         startDrawing(e);
     }
@@ -384,10 +388,14 @@ function handleCanvasClick(e) {
     if (currentExercise && currentExercise.type.startsWith('point-')) {
         checkPointPlacement(pos);
     } 
-    // Модуль 2: Дорожки
+    // Модуль 2 и 3: Дорожки
     else if (currentExercise && currentExercise.type.startsWith('path-')) {
         startDrawingPath(e);
-    } 
+    }
+    // Модуль 4: Серийность движений (используют механизм дорожек)
+    else if (currentExercise && (currentExercise.type === 'rhythmic-fence' || currentExercise.type === 'wave-cliff')) {
+        startDrawingPath(e);
+    }
     else {
         startDrawing(e);
     }
@@ -527,8 +535,10 @@ function draw(e) {
     
     const pos = getPosition(e);
     
-    // Модуль 2: Проверка границ дорожки
-    if (currentExercise && currentExercise.type.startsWith('path-')) {
+    // Модуль 2, 3 и 4: Проверка границ дорожки
+    if (currentExercise && (currentExercise.type.startsWith('path-') || 
+        currentExercise.type === 'rhythmic-fence' || 
+        currentExercise.type === 'wave-cliff')) {
         drawPathWithCheck(pos);
         return;
     }
@@ -548,8 +558,10 @@ function stopDrawing(e) {
     isDrawing = false;
     ctx.closePath();
     
-    // Модуль 2: Проверка достижения финиша
-    if (currentExercise && currentExercise.type.startsWith('path-')) {
+    // Модуль 2, 3 и 4: Проверка достижения финиша
+    if (currentExercise && (currentExercise.type.startsWith('path-') || 
+        currentExercise.type === 'rhythmic-fence' || 
+        currentExercise.type === 'wave-cliff')) {
         checkPathFinish();
     }
 }
@@ -766,6 +778,16 @@ function drawPathWithCheck(pos) {
         return;
     }
     
+    // Отладка для Модуля 4
+    if (currentExercise && (currentExercise.type === 'rhythmic-fence' || currentExercise.type === 'wave-cliff')) {
+        console.log('Module 4 check:', {
+            exerciseType: currentExercise.type,
+            distanceToPath: distanceToPath.toFixed(2),
+            pathPointsCount: pathPoints.length,
+            userPathCount: userPath.length
+        });
+    }
+    
     // Проверка выхода за границы - увеличенная зона допуска для мобильных устройств
     let boundaryTolerance = 20; // По умолчанию
     
@@ -777,6 +799,11 @@ function drawPathWithCheck(pos) {
     // Для упражнения "Спираль" (улитка) делаем еще более мягкие границы
     if (currentExercise && currentExercise.type === 'path-spiral') {
         boundaryTolerance = 30; // Увеличенная зона допуска для спирали
+    }
+    
+    // Для упражнений Модуля 4 (серийность движений) делаем более мягкие границы
+    if (currentExercise && (currentExercise.type === 'rhythmic-fence' || currentExercise.type === 'wave-cliff')) {
+        boundaryTolerance = 25; // Увеличенная зона допуска для сложных траекторий
     }
     
     if (distanceToPath > boundaryTolerance) {
@@ -1050,6 +1077,9 @@ function completePathExercise() {
     if (currentExercise && currentExercise.type === 'path-spiral') {
         allowedErrors = 3;
     }
+    
+    // Для Модуля 4 - строгая проверка (0 ошибок), как в Модуле 2
+    // (не добавляем allowedErrors для rhythmic-fence и wave-cliff)
     
     if (exitCount <= allowedErrors) {
         // Для упражнений с несколькими линиями - определяем, какую линию завершили
@@ -1391,6 +1421,14 @@ function drawExerciseTemplate(exercise) {
             break;
         case 'path-loops':
             drawPathLoops();
+            break;
+        
+        // Модуль 4: Серийность движений
+        case 'rhythmic-fence':
+            drawRhythmicFence();
+            break;
+        case 'wave-cliff':
+            drawWaveCliff();
             break;
         
         // Другие модули
@@ -2535,6 +2573,213 @@ function drawPathLoops() {
             ctx.arc(waveEndX, endY, pointSize, 0, Math.PI * 2);
             ctx.stroke();
         }
+    }
+}
+
+// ============================================
+// МОДУЛЬ 4: СЕРИЙНОСТЬ ДВИЖЕНИЙ
+// ============================================
+
+// Ритмичный заборчик - зигзаг с чередованием высоты зубцов
+function drawRhythmicFence() {
+    // Центрированный зигзаг с чередующейся высотой зубцов
+    const totalWidth = canvas.width * 0.75; // 75% от ширины экрана
+    const startX = (canvas.width - totalWidth) / 2; // Центрируем
+    const endX = startX + totalWidth;
+    
+    // Базовая линия (нижняя точка для всех зубцов)
+    const baseY = canvas.height * 0.65; // Нижняя линия
+    
+    // Высоты зубцов
+    const tallHeight = Math.min(80, canvas.height * 0.2);   // Высота четных зубцов
+    const shortHeight = tallHeight / 2;                      // Высота нечетных зубцов (в 2 раза ниже)
+    
+    const tallTopY = baseY - tallHeight;    // Вершина четных (высоких) зубцов
+    const shortTopY = baseY - shortHeight;  // Вершина нечетных (низких) зубцов
+    
+    // 6 зубцов (3 высоких + 3 низких, чередуются)
+    const toothCount = 6;
+    const toothWidth = totalWidth / toothCount;
+    
+    pathPoints = [];
+    
+    // Генерируем точки траектории
+    // Паттерн: base -> short -> base -> tall -> base -> short -> base -> tall -> base -> short -> base -> tall -> base
+    for (let i = 0; i < toothCount; i++) {
+        const toothStartX = startX + i * toothWidth;
+        const toothMidX = toothStartX + toothWidth / 2;
+        const toothEndX = toothStartX + toothWidth;
+        
+        // Определяем высоту текущего зубца (четные - высокие, нечетные - низкие)
+        const isEven = i % 2 === 0;
+        const topY = isEven ? tallTopY : shortTopY;
+        
+        // Подъем от базовой линии к вершине
+        const upSteps = 15;
+        for (let j = 0; j <= upSteps; j++) {
+            const t = j / upSteps;
+            const px = toothStartX + t * (toothWidth / 2);
+            const py = baseY + (topY - baseY) * t;
+            pathPoints.push({ x: px, y: py });
+        }
+        
+        // Спуск от вершины к базовой линии
+        const downSteps = 15;
+        for (let j = 1; j <= downSteps; j++) {
+            const t = j / downSteps;
+            const px = toothMidX + t * (toothWidth / 2);
+            const py = topY + (baseY - topY) * t;
+            pathPoints.push({ x: px, y: py });
+        }
+    }
+    
+    // Рисуем фон дорожки
+    ctx.strokeStyle = '#e0e0e0';
+    ctx.lineWidth = Math.min(35, canvas.width * 0.08);
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    
+    if (pathPoints.length > 0) {
+        ctx.moveTo(pathPoints[0].x, pathPoints[0].y);
+        for (let i = 1; i < pathPoints.length; i++) {
+            ctx.lineTo(pathPoints[i].x, pathPoints[i].y);
+        }
+    }
+    ctx.stroke();
+    
+    // Целевая траектория (пунктир)
+    ctx.strokeStyle = '#667eea';
+    ctx.lineWidth = 3;
+    ctx.setLineDash([10, 5]);
+    ctx.beginPath();
+    
+    if (pathPoints.length > 0) {
+        ctx.moveTo(pathPoints[0].x, pathPoints[0].y);
+        for (let i = 1; i < pathPoints.length; i++) {
+            ctx.lineTo(pathPoints[i].x, pathPoints[i].y);
+        }
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+    
+    // Стартовая точка
+    ctx.fillStyle = '#4caf50';
+    ctx.beginPath();
+    ctx.arc(startX, baseY, 12, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Финишная зона
+    finishZone = { x: endX, y: baseY, radius: 30 };
+    ctx.strokeStyle = '#ff9800';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(endX, baseY, 15, 0, Math.PI * 2);
+    ctx.stroke();
+}
+
+// Волна и утес - чередование плавной волны и резкого угла
+function drawWaveCliff() {
+    // Центрированная траектория
+    const totalWidth = canvas.width * 0.75; // 75% от ширины экрана
+    const startX = (canvas.width - totalWidth) / 2; // Центрируем
+    const centerY = canvas.height / 2;
+    const amplitude = Math.min(35, canvas.height * 0.09);
+    
+    // Паттерн: волна -> угол -> волна -> угол -> волна -> угол -> волна
+    // 3 угла + 4 волны = 7 элементов
+    const elements = 7;
+    const elementWidth = totalWidth / elements;
+    
+    pathPoints = [];
+    
+    // Генерируем точки траектории
+    for (let i = 0; i < elements; i++) {
+        const elementStartX = startX + i * elementWidth;
+        const isWave = (i % 2 === 0); // Четные индексы (0,2,4,6) - волны, нечетные (1,3,5) - углы
+        
+        if (isWave) {
+            // Плавная волна (половина синусоиды)
+            const waveSteps = 20;
+            for (let j = 0; j <= waveSteps; j++) {
+                const t = j / waveSteps;
+                const x = elementStartX + t * elementWidth;
+                const angle = t * Math.PI; // Половина периода (от 0 до π)
+                const y = centerY - Math.sin(angle) * amplitude; // Минус для волны вверх
+                pathPoints.push({ x: x, y: y });
+            }
+        } else {
+            // Резкий угол (^)
+            const peakX = elementStartX + elementWidth / 2;
+            const peakY = centerY - amplitude * 1.5; // Угол выше волны
+            
+            // Подъем к вершине
+            const upSteps = 10;
+            for (let j = 1; j <= upSteps; j++) {
+                const t = j / upSteps;
+                const x = elementStartX + t * (elementWidth / 2);
+                const y = centerY + (peakY - centerY) * t;
+                pathPoints.push({ x: x, y: y });
+            }
+            
+            // Спуск от вершины
+            const downSteps = 10;
+            for (let j = 1; j <= downSteps; j++) {
+                const t = j / downSteps;
+                const x = peakX + t * (elementWidth / 2);
+                const y = peakY + (centerY - peakY) * t;
+                pathPoints.push({ x: x, y: y });
+            }
+        }
+    }
+    
+    // Рисуем фон дорожки
+    ctx.strokeStyle = '#e0e0e0';
+    ctx.lineWidth = Math.min(35, canvas.width * 0.08);
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    
+    if (pathPoints.length > 0) {
+        ctx.moveTo(pathPoints[0].x, pathPoints[0].y);
+        for (let i = 1; i < pathPoints.length; i++) {
+            ctx.lineTo(pathPoints[i].x, pathPoints[i].y);
+        }
+    }
+    ctx.stroke();
+    
+    // Целевая траектория (пунктир)
+    ctx.strokeStyle = '#667eea';
+    ctx.lineWidth = 3;
+    ctx.setLineDash([10, 5]);
+    ctx.beginPath();
+    
+    if (pathPoints.length > 0) {
+        ctx.moveTo(pathPoints[0].x, pathPoints[0].y);
+        for (let i = 1; i < pathPoints.length; i++) {
+            ctx.lineTo(pathPoints[i].x, pathPoints[i].y);
+        }
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+    
+    // Стартовая точка
+    if (pathPoints.length > 0) {
+        ctx.fillStyle = '#4caf50';
+        ctx.beginPath();
+        ctx.arc(pathPoints[0].x, pathPoints[0].y, 12, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    
+    // Финишная зона
+    if (pathPoints.length > 0) {
+        const lastPoint = pathPoints[pathPoints.length - 1];
+        finishZone = { x: lastPoint.x, y: lastPoint.y, radius: 30 };
+        ctx.strokeStyle = '#ff9800';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(lastPoint.x, lastPoint.y, 15, 0, Math.PI * 2);
+        ctx.stroke();
     }
 }
 
