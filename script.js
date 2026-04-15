@@ -66,6 +66,8 @@ function showMainMenu() {
     if (gridControls) gridControls.classList.add('hidden');
     // Разрешаем скролл в меню
     document.body.style.overflow = 'auto';
+    // ИСПРАВЛЕНИЕ ОШИБКИ 3: Сбрасываем зеленый фон при выходе в главное меню
+    document.body.style.backgroundColor = '';
 }
 
 function showExercises() {
@@ -115,6 +117,13 @@ function loadModule(moduleNum) {
     currentModule = moduleNum;
     currentExerciseIndex = 0;
     moduleExercises = getModuleExercises(moduleNum);
+    
+    // ИСПРАВЛЕНИЕ ОШИБКИ 3: Зеленый фон для Модуля 6
+    if (moduleNum === 6) {
+        document.body.style.backgroundColor = '#f0fff0';
+    } else {
+        document.body.style.backgroundColor = '';
+    }
     
     hideAllScreens();
     document.getElementById('exercise-screen').classList.remove('hidden');
@@ -313,10 +322,12 @@ function displayExercise(exercise) {
     }
     
     if (canvas && ctx) {
-        // Пересчитываем размеры canvas перед отрисовкой
-        resizeCanvas();
-        clearCanvas();
-        drawExerciseTemplate(exercise);
+        // ИСПРАВЛЕНИЕ ОШИБКИ 1: Принудительно обновляем размеры canvas после показа экрана
+        setTimeout(() => {
+            resizeCanvas();
+            clearCanvas();
+            drawExerciseTemplate(exercise);
+        }, 50); // Даем время на отрисовку DOM
     } else {
         console.error('Canvas not initialized!');
     }
@@ -1540,6 +1551,7 @@ function drawExerciseTemplate(exercise) {
         
         // Модуль 6: Графические диктанты
         case 'grid-square':
+        case 'grid-mountain':
         case 'grid-triangle':
         case 'grid-stairs':
         case 'grid-house':
