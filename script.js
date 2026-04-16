@@ -186,6 +186,8 @@ function getModuleExercises(moduleNum) {
               sequence: ['right', 'up', 'right', 'up', 'right', 'up', 'right', 'up', 'right', 'down', 'right', 'down', 'right', 'down', 'right', 'down'] },
             { title: 'Цифровая змейка', type: 'grid-snake', instruction: 'Нарисуй змейку: 1 вправо, 1 вверх, 2 вправо, 1 вниз, 1 вправо, 2 вверх, 1 вправо, 2 вниз', 
               sequence: ['right', 'up', 'right', 'right', 'down', 'right', 'up', 'up', 'right', 'down', 'down'] },
+            { title: 'Волшебный цилиндр', type: 'grid-snake', instruction: 'Нарисуй шляпу фокусника: 1 вправо, 3 вверх, 2 вправо, 3 вниз, 1 вправо, 1 вниз, 4 влево, 1 вверх', 
+              sequence: ['right', 'up', 'up', 'up', 'right', 'right', 'down', 'down', 'down', 'right', 'down', 'left', 'left', 'left', 'left', 'up'] },
             { title: 'Лесенка вверх', type: 'grid-stairs', instruction: 'Проведи: вправо, вверх, вправо, вверх, вправо, вверх', 
               sequence: ['right', 'up', 'right', 'up', 'right', 'up'] },
             { title: 'Домик с крышей', type: 'grid-house', instruction: 'Нарисуй домик: основание и треугольную крышу', 
@@ -3487,26 +3489,66 @@ function drawGridTemplate() {
         currentGridX = 1;
         currentGridY = Math.floor(gridRows * 0.8);
     } else if (currentExercise && currentExercise.type === 'grid-snake') {
-        // Для змейки - рассчитываем безопасную стартовую позицию
-        // Траектория: 1 вправо → 1 вверх → 2 вправо → 1 вниз → 1 вправо → 2 вверх → 1 вправо → 2 вниз
-        // Максимальные смещения: вправо = 5, вверх = 2, вниз = 1 (итоговое смещение)
-        const maxRight = 5; // суммарное движение вправо
-        const maxUp = 2;    // максимальное движение вверх от стартовой точки
-        const maxDown = 1;  // итоговое смещение вниз от стартовой точки
-        
-        // Стартовая позиция: достаточно места справа и сверху/снизу
-        currentGridX = Math.max(2, Math.floor(gridCols * 0.25)); // 25% от левого края, минимум 2 клетки
-        currentGridY = Math.floor(gridRows * 0.4); // 40% от верха (ближе к верху, так как больше движений вверх)
-        
-        // Проверяем, что змейка поместится
-        if (currentGridX + maxRight >= gridCols) {
-            currentGridX = gridCols - maxRight - 1;
-        }
-        if (currentGridY - maxUp < 0) {
-            currentGridY = maxUp + 1;
-        }
-        if (currentGridY + maxDown >= gridRows) {
-            currentGridY = gridRows - maxDown - 1;
+        // Различаем упражнения типа grid-snake по названию
+        if (currentExercise.title === 'Цифровая змейка') {
+            // Траектория: 1 вправо → 1 вверх → 2 вправо → 1 вниз → 1 вправо → 2 вверх → 1 вправо → 2 вниз
+            // Максимальные смещения: вправо = 5, вверх = 2, вниз = 1 (итоговое смещение)
+            const maxRight = 5; // суммарное движение вправо
+            const maxUp = 2;    // максимальное движение вверх от стартовой точки
+            const maxDown = 1;  // итоговое смещение вниз от стартовой точки
+            
+            // Стартовая позиция: достаточно места справа и сверху/снизу
+            currentGridX = Math.max(2, Math.floor(gridCols * 0.25)); // 25% от левого края, минимум 2 клетки
+            currentGridY = Math.floor(gridRows * 0.4); // 40% от верха (ближе к верху, так как больше движений вверх)
+            
+            // Проверяем, что змейка поместится
+            if (currentGridX + maxRight >= gridCols) {
+                currentGridX = gridCols - maxRight - 1;
+            }
+            if (currentGridY - maxUp < 0) {
+                currentGridY = maxUp + 1;
+            }
+            if (currentGridY + maxDown >= gridRows) {
+                currentGridY = gridRows - maxDown - 1;
+            }
+        } else if (currentExercise.title === 'Волшебный цилиндр') {
+            // Траектория: 1→, 3↑, 2→, 3↓, 1→, 1↓, 4←, 1↑
+            // Максимальные смещения: вправо = 4, вверх = 3, вниз = 4 (промежуточное)
+            // Итоговые размеры фигуры: ширина = 4, высота = 4 (с учетом промежуточных позиций)
+            const figureWidth = 4;  // максимальная ширина фигуры
+            const figureHeight = 4; // максимальная высота фигуры
+            
+            // Центрируем фигуру на экране
+            currentGridX = Math.floor((gridCols - figureWidth) / 2);
+            currentGridY = Math.floor((gridRows - figureHeight) / 2) + 3; // +3 чтобы начать снизу фигуры
+            
+            // Проверяем границы
+            if (currentGridX < 0) currentGridX = 0;
+            if (currentGridY < 3) currentGridY = 3;
+            if (currentGridX + figureWidth >= gridCols) {
+                currentGridX = gridCols - figureWidth - 1;
+            }
+            if (currentGridY + 1 >= gridRows) {
+                currentGridY = gridRows - 2;
+            }
+        } else {
+            // Для других упражнений grid-snake - используем логику змейки
+            const maxRight = 5;
+            const maxUp = 2;
+            const maxDown = 1;
+            
+            currentGridX = Math.max(2, Math.floor(gridCols * 0.25));
+            currentGridY = Math.floor(gridRows * 0.4);
+            
+            if (currentGridX + maxRight >= gridCols) {
+                currentGridX = gridCols - maxRight - 1;
+            }
+            if (currentGridY - maxUp < 0) {
+                currentGridY = maxUp + 1;
+            }
+            if (currentGridY + maxDown >= gridRows) {
+                currentGridY = gridRows - maxDown - 1;
+            }
         }
     } else {
         // Для остальных упражнений - в центре сетки
@@ -3738,7 +3780,14 @@ function completeGridExercise() {
     } else if (currentExercise && currentExercise.type === 'grid-mountain') {
         message = '🏔 Гора покорена! Ты настоящий альпинист!';
     } else if (currentExercise && currentExercise.type === 'grid-snake') {
-        message = '🐍 Змейка готова! Отличная переключаемость внимания!';
+        // Различаем упражнения типа grid-snake по названию
+        if (currentExercise.title === 'Цифровая змейка') {
+            message = '🐍 Змейка готова! Отличная переключаемость внимания!';
+        } else if (currentExercise.title === 'Волшебный цилиндр') {
+            message = '🎩 Алле-оп! Шляпа готова. Что спрятал там фокусник?';
+        } else {
+            message = '🐍 Змейка готова! Отличная переключаемость внимания!';
+        }
     } else if (currentExercise && currentExercise.type === 'grid-triangle') {
         message = '🎉 Треугольник готов! Красивая крыша!';
     } else if (currentExercise && currentExercise.type === 'grid-stairs') {
@@ -3775,26 +3824,66 @@ function resetGridExercise() {
         currentGridX = 1;
         currentGridY = Math.floor(gridRows * 0.8);
     } else if (currentExercise && currentExercise.type === 'grid-snake') {
-        // Для змейки - рассчитываем стартовую позицию с учетом новой траектории:
-        // 1 вправо → 1 вверх → 2 вправо → 1 вниз → 1 вправо → 2 вверх → 1 вправо → 2 вниз
-        // Максимальные смещения: вправо = 5, вверх = 2, вниз = 1 (итоговое смещение)
-        const maxRight = 5; // суммарное движение вправо
-        const maxUp = 2;    // максимальное движение вверх от стартовой точки
-        const maxDown = 1;  // итоговое смещение вниз от стартовой точки
-        
-        // Стартовая позиция: достаточно места справа и сверху/снизу
-        currentGridX = Math.max(2, Math.floor(gridCols * 0.25)); // 25% от левого края, минимум 2 клетки
-        currentGridY = Math.floor(gridRows * 0.4); // 40% от верха (ближе к верху, так как больше движений вверх)
-        
-        // Проверяем, что змейка поместится
-        if (currentGridX + maxRight >= gridCols) {
-            currentGridX = gridCols - maxRight - 1;
-        }
-        if (currentGridY - maxUp < 0) {
-            currentGridY = maxUp + 1;
-        }
-        if (currentGridY + maxDown >= gridRows) {
-            currentGridY = gridRows - maxDown - 1;
+        // Различаем упражнения типа grid-snake по названию
+        if (currentExercise.title === 'Цифровая змейка') {
+            // Траектория: 1 вправо → 1 вверх → 2 вправо → 1 вниз → 1 вправо → 2 вверх → 1 вправо → 2 вниз
+            // Максимальные смещения: вправо = 5, вверх = 2, вниз = 1 (итоговое смещение)
+            const maxRight = 5; // суммарное движение вправо
+            const maxUp = 2;    // максимальное движение вверх от стартовой точки
+            const maxDown = 1;  // итоговое смещение вниз от стартовой точки
+            
+            // Стартовая позиция: достаточно места справа и сверху/снизу
+            currentGridX = Math.max(2, Math.floor(gridCols * 0.25)); // 25% от левого края, минимум 2 клетки
+            currentGridY = Math.floor(gridRows * 0.4); // 40% от верха (ближе к верху, так как больше движений вверх)
+            
+            // Проверяем, что змейка поместится
+            if (currentGridX + maxRight >= gridCols) {
+                currentGridX = gridCols - maxRight - 1;
+            }
+            if (currentGridY - maxUp < 0) {
+                currentGridY = maxUp + 1;
+            }
+            if (currentGridY + maxDown >= gridRows) {
+                currentGridY = gridRows - maxDown - 1;
+            }
+        } else if (currentExercise.title === 'Волшебный цилиндр') {
+            // Траектория: 1→, 3↑, 2→, 3↓, 1→, 1↓, 4←, 1↑
+            // Максимальные смещения: вправо = 4, вверх = 3, вниз = 4 (промежуточное)
+            // Итоговые размеры фигуры: ширина = 4, высота = 4 (с учетом промежуточных позиций)
+            const figureWidth = 4;  // максимальная ширина фигуры
+            const figureHeight = 4; // максимальная высота фигуры
+            
+            // Центрируем фигуру на экране
+            currentGridX = Math.floor((gridCols - figureWidth) / 2);
+            currentGridY = Math.floor((gridRows - figureHeight) / 2) + 3; // +3 чтобы начать снизу фигуры
+            
+            // Проверяем границы
+            if (currentGridX < 0) currentGridX = 0;
+            if (currentGridY < 3) currentGridY = 3;
+            if (currentGridX + figureWidth >= gridCols) {
+                currentGridX = gridCols - figureWidth - 1;
+            }
+            if (currentGridY + 1 >= gridRows) {
+                currentGridY = gridRows - 2;
+            }
+        } else {
+            // Для других упражнений grid-snake - используем логику змейки
+            const maxRight = 5;
+            const maxUp = 2;
+            const maxDown = 1;
+            
+            currentGridX = Math.max(2, Math.floor(gridCols * 0.25));
+            currentGridY = Math.floor(gridRows * 0.4);
+            
+            if (currentGridX + maxRight >= gridCols) {
+                currentGridX = gridCols - maxRight - 1;
+            }
+            if (currentGridY - maxUp < 0) {
+                currentGridY = maxUp + 1;
+            }
+            if (currentGridY + maxDown >= gridRows) {
+                currentGridY = gridRows - maxDown - 1;
+            }
         }
     } else {
         currentGridX = Math.floor(gridCols / 2);
