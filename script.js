@@ -27,7 +27,7 @@ let totalSubTasks = 0; // Всего подзадач
 let completedSubTasks = []; // Массив завершенных подзадач (какие линии реально провел пользователь)
 
 // Переменные для Модуля 6 (Графические диктанты)
-let gridSize = 30; // Размер клетки в пикселях
+let gridSize = 25; // Размер клетки в пикселях (уменьшен для больших фигур)
 let gridStartX = 0; // Начальная позиция по X
 let gridStartY = 0; // Начальная позиция по Y
 let currentGridX = 0; // Текущая позиция по X в сетке
@@ -188,10 +188,8 @@ function getModuleExercises(moduleNum) {
               sequence: ['right', 'up', 'right', 'right', 'down', 'right', 'up', 'up', 'right', 'down', 'down'] },
             { title: 'Волшебный цилиндр', type: 'grid-snake', instruction: 'Нарисуй шляпу фокусника: 1 вправо, 3 вверх, 2 вправо, 3 вниз, 1 вправо, 1 вниз, 4 влево, 1 вверх', 
               sequence: ['right', 'up', 'up', 'up', 'right', 'right', 'down', 'down', 'down', 'right', 'down', 'left', 'left', 'left', 'left', 'up'] },
-            { title: 'Лесенка вверх', type: 'grid-stairs', instruction: 'Проведи: вправо, вверх, вправо, вверх, вправо, вверх', 
-              sequence: ['right', 'up', 'right', 'up', 'right', 'up'] },
-            { title: 'Домик с крышей', type: 'grid-house', instruction: 'Нарисуй домик: основание и треугольную крышу', 
-              sequence: ['right', 'right', 'right', 'up', 'up', 'right', 'up', 'left', 'up', 'left', 'down', 'left', 'left', 'down', 'down'] }
+            { title: 'Подарок', type: 'grid-heart', instruction: 'Давай нарисуем красивое сердечко! Внимательно слушай и точно выполняй каждый шаг: начни с 2 шагов вправо, затем 1 шаг вниз, снова 2 шага вправо, потом 1 шаг вверх, ещё 2 шага вправо, 1 шаг вниз, 1 шаг вправо и 3 шага вниз. Теперь важная часть - повторяй трижды такую связку: 1 шаг влево и 1 шаг вниз. После этого сделай 2 шага влево. Теперь снова повторяй трижды: 1 шаг вверх и 1 шаг влево. Завершаем сердечко: 3 шага вверх, 1 шаг вправо и 1 шаг вверх для замыкания контура.', 
+              sequence: ['right', 'right', 'down', 'right', 'right', 'up', 'right', 'right', 'down', 'right', 'down', 'down', 'down', 'left', 'down', 'left', 'down', 'left', 'down', 'left', 'left', 'up', 'left', 'up', 'left', 'up', 'left', 'up', 'up', 'up', 'right', 'up'] }
         ],
         7: [
             { title: 'Найди ошибку', type: 'find-error', instruction: 'Найди неправильный элемент' },
@@ -311,8 +309,14 @@ function displayExercise(exercise) {
         regularControls.classList.add('hidden');
         gridControls.classList.remove('hidden');
         
-        // Скрываем кнопку "Дальше" при инициализации
-        document.getElementById('next-level-btn').classList.add('hidden');
+        // Управляем видимостью кнопки "Дальше" при инициализации
+        if (currentModule === 6) {
+            // В Модуле 6 (графические диктанты) кнопка "Дальше" всегда видна
+            document.getElementById('next-level-btn').classList.remove('hidden');
+        } else {
+            // В других модулях скрываем кнопку "Дальше" при инициализации
+            document.getElementById('next-level-btn').classList.add('hidden');
+        }
         
         // Обновляем счетчик шагов
         document.getElementById('current-step').textContent = '0';
@@ -1555,9 +1559,8 @@ function drawExerciseTemplate(exercise) {
         case 'grid-square':
         case 'grid-mountain':
         case 'grid-snake':
+        case 'grid-heart':
         case 'grid-triangle':
-        case 'grid-stairs':
-        case 'grid-house':
             drawGridTemplate();
             break;
         
@@ -3433,8 +3436,8 @@ function drawDefaultTemplate() {
 
 // Рисование сетки для графических диктантов
 function drawGridTemplate() {
-    // Вычисляем размер клетки адаптивно (минимум 10 клеток по ширине)
-    gridSize = Math.min(30, Math.floor(canvas.width / 10));
+    // Вычисляем размер клетки адаптивно (минимум 10 клеток по ширине, максимум 25 для больших фигур)
+    gridSize = Math.min(25, Math.floor(canvas.width / 10));
     
     // Вычисляем количество клеток по горизонтали и вертикали
     const gridCols = Math.floor(canvas.width / gridSize);
@@ -3446,8 +3449,8 @@ function drawGridTemplate() {
     gridStartX = (canvas.width - totalGridWidth) / 2;
     gridStartY = (canvas.height - totalGridHeight) / 2;
     
-    // Для grid-mountain и grid-snake заливаем весь холст светло-зеленым
-    if (currentExercise && (currentExercise.type === 'grid-mountain' || currentExercise.type === 'grid-snake')) {
+    // Для grid-mountain, grid-snake и grid-heart заливаем весь холст светло-зеленым
+    if (currentExercise && (currentExercise.type === 'grid-mountain' || currentExercise.type === 'grid-snake' || currentExercise.type === 'grid-heart')) {
         ctx.fillStyle = '#f0fff0';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
@@ -3457,7 +3460,7 @@ function drawGridTemplate() {
     ctx.fillRect(gridStartX, gridStartY, totalGridWidth, totalGridHeight);
     
     // Рисуем линии сетки
-    if (currentExercise && (currentExercise.type === 'grid-mountain' || currentExercise.type === 'grid-snake')) {
+    if (currentExercise && (currentExercise.type === 'grid-mountain' || currentExercise.type === 'grid-snake' || currentExercise.type === 'grid-heart')) {
         ctx.strokeStyle = '#b2dfb2';
         ctx.lineWidth = 1;
     } else {
@@ -3549,6 +3552,25 @@ function drawGridTemplate() {
             if (currentGridY + maxDown >= gridRows) {
                 currentGridY = gridRows - maxDown - 1;
             }
+        }
+    } else if (currentExercise && currentExercise.type === 'grid-heart') {
+        // Для сердечка - рассчитываем стартовую позицию для фигуры 7x7
+        // Траектория сердечка требует достаточно места во всех направлениях
+        const figureWidth = 7;  // максимальная ширина сердечка
+        const figureHeight = 7; // максимальная высота сердечка
+        
+        // Устанавливаем стартовую позицию: 3 клетки левее центра, 2 клетки выше центра
+        currentGridX = Math.floor(gridCols / 2) - 3;
+        currentGridY = Math.floor(gridRows / 2) - 2;
+        
+        // Проверяем границы, чтобы координаты не были меньше 1
+        if (currentGridX < 1) currentGridX = 1;
+        if (currentGridY < 1) currentGridY = 1;
+        if (currentGridX + figureWidth >= gridCols) {
+            currentGridX = gridCols - figureWidth - 1;
+        }
+        if (currentGridY + figureHeight >= gridRows) {
+            currentGridY = gridRows - figureHeight - 1;
         }
     } else {
         // Для остальных упражнений - в центре сетки
@@ -3645,9 +3667,11 @@ function moveDirection(direction) {
     // Проверяем правильность шага
     const expectedDirection = targetSequence[userSequence.length];
     if (direction !== expectedDirection) {
-        // Неправильный шаг - показываем специальное сообщение для горы
+        // Неправильный шаг - показываем специальное сообщение для разных типов упражнений
         if (currentExercise && currentExercise.type === 'grid-mountain') {
             showGridMountainError();
+        } else if (currentExercise && (currentExercise.type === 'grid-snake' || currentExercise.type === 'grid-heart')) {
+            showGridError();
         } else {
             showGridError();
         }
@@ -3788,12 +3812,10 @@ function completeGridExercise() {
         } else {
             message = '🐍 Змейка готова! Отличная переключаемость внимания!';
         }
+    } else if (currentExercise && currentExercise.type === 'grid-heart') {
+        message = '❤️ Потрясающе! Ты нарисовал сердечко и успешно прошел весь модуль графических диктантов! Ты настоящий мастер!';
     } else if (currentExercise && currentExercise.type === 'grid-triangle') {
         message = '🎉 Треугольник готов! Красивая крыша!';
-    } else if (currentExercise && currentExercise.type === 'grid-stairs') {
-        message = '🎉 Лесенка готова! Можно подниматься!';
-    } else if (currentExercise && currentExercise.type === 'grid-house') {
-        message = '🎉 Домик готов! Отличная архитектура!';
     }
     
     feedback.textContent = message;
@@ -3885,13 +3907,38 @@ function resetGridExercise() {
                 currentGridY = gridRows - maxDown - 1;
             }
         }
+    } else if (currentExercise && currentExercise.type === 'grid-heart') {
+        // Для сердечка - рассчитываем стартовую позицию для фигуры 7x7
+        // Траектория сердечка требует достаточно места во всех направлениях
+        const figureWidth = 7;  // максимальная ширина сердечка
+        const figureHeight = 7; // максимальная высота сердечка
+        
+        // Устанавливаем стартовую позицию: 3 клетки левее центра, 2 клетки выше центра
+        currentGridX = Math.floor(gridCols / 2) - 3;
+        currentGridY = Math.floor(gridRows / 2) - 2;
+        
+        // Проверяем границы, чтобы координаты не были меньше 1
+        if (currentGridX < 1) currentGridX = 1;
+        if (currentGridY < 1) currentGridY = 1;
+        if (currentGridX + figureWidth >= gridCols) {
+            currentGridX = gridCols - figureWidth - 1;
+        }
+        if (currentGridY + figureHeight >= gridRows) {
+            currentGridY = gridRows - figureHeight - 1;
+        }
     } else {
         currentGridX = Math.floor(gridCols / 2);
         currentGridY = Math.floor(gridRows / 2);
     }
     
-    // Скрываем кнопку "Дальше"
-    document.getElementById('next-level-btn').classList.add('hidden');
+    // Управляем видимостью кнопки "Дальше" в зависимости от модуля
+    if (currentModule === 6) {
+        // В Модуле 6 (графические диктанты) кнопка "Дальше" всегда видна
+        document.getElementById('next-level-btn').classList.remove('hidden');
+    } else {
+        // В других модулях скрываем кнопку "Дальше"
+        document.getElementById('next-level-btn').classList.add('hidden');
+    }
     
     // Обновляем счетчик
     document.getElementById('current-step').textContent = '0';
