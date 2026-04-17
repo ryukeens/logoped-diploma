@@ -3883,7 +3883,7 @@ function drawPatternDots() {
         const activePointPixel = pixelPoints[activePoint];
         ctx.beginPath();
         ctx.moveTo(rightOffset + activePointPixel.x, activePointPixel.y);
-        ctx.lineTo(rightOffset + tempLine.x, tempLine.y);
+        ctx.lineTo(tempLine.x, tempLine.y);
         ctx.stroke();
         
         ctx.setLineDash([]);
