@@ -36,6 +36,30 @@ let userSequence = []; // Последовательность шагов пол
 let targetSequence = []; // Целевая последовательность
 let gridPath = []; // Путь пользователя в координатах canvas
 
+// Переменные для Модуля 5 (Зрительно-моторное соотнесение)
+let gridCellSize = 35; // Размер клетки в пикселях
+let gridOffsetX = 0; // Смещение сетки по X
+let gridOffsetY = 0; // Смещение сетки по Y
+let mirrorTreeSegments = []; // Массив сегментов елочки (левый образец)
+let mirrorTreeTargets = []; // Массив целевых сегментов (правая сторона, зеркальное отражение)
+let completedSegments = []; // Индексы завершенных сегментов
+let treePathTolerance = 20; // Допуск для попадания в траекторию (в пикселях)
+let userDrawnPoints = []; // Точки, нарисованные пользователем
+let segmentStartPoints = []; // Отслеживание прохождения через начальную точку каждого сегмента
+let segmentEndPoints = []; // Отслеживание прохождения через конечную точку каждого сегмента
+let pointTolerance = 25; // Допуск для попадания в контрольную точку (пиксели)
+
+// Переменные для pattern-dots (Узор по точкам)
+let patternPoints = []; // Координаты точек сетки
+let patternReference = []; // Эталонный узор (массив пар индексов)
+let userConnections = []; // Соединения, которые провел пользователь
+let activePoint = null; // Активная точка при рисовании
+let tempLine = null; // Временная линия при перемещении
+let dotGridSize = 5; // Размер сетки (5x5)
+let dotRadius = 8; // Радиус точки в пикселях
+let dotTolerance = 15; // Допуск для попадания в точку (пиксели)
+let patternStartPoint = null; // Индекс стартовой точки (выделяется синим)
+
 // Загрузка статистики из localStorage
 function loadStats() {
     const saved = localStorage.getItem('graphomotorStats');
@@ -176,8 +200,54 @@ function getModuleExercises(moduleNum) {
             { title: 'Комбинированная цепь', type: 'combined-chain', instruction: 'Финальный тест: круги, углы и прямые линии в одной цепи' }
         ],
         5: [
-            { title: 'Повтори узор', type: 'copy', instruction: 'Повтори узор справа' },
-            { title: 'Дострой фигуру', type: 'complete', instruction: 'Дорисуй вторую половину' }
+            { 
+                title: 'Зеркальная елочка', 
+                type: 'mirror-tree', 
+                instruction: 'Повтори елочку справа, глядя на образец слева',
+                subTasks: 3,
+                segments: [
+                    // ВЕРХНИЙ ТРЕУГОЛЬНИК (subTaskIndex: 0)
+                    { x1: 0, y1: 1, x2: -2, y2: 3, isCompleted: false, subTaskIndex: 0 },   // левая сторона верхнего треугольника
+                    { x1: 0, y1: 1, x2: 2, y2: 3, isCompleted: false, subTaskIndex: 0 },    // правая сторона верхнего треугольника
+                    { x1: -2, y1: 3, x2: 2, y2: 3, isCompleted: false, subTaskIndex: 0 },   // основание верхнего треугольника
+                    
+                    // НИЖНИЙ ТРЕУГОЛЬНИК (subTaskIndex: 1)
+                    { x1: 0, y1: 3, x2: -3, y2: 6, isCompleted: false, subTaskIndex: 1 },   // левая сторона нижнего треугольника
+                    { x1: 0, y1: 3, x2: 3, y2: 6, isCompleted: false, subTaskIndex: 1 },    // правая сторона нижнего треугольника
+                    { x1: -3, y1: 6, x2: 3, y2: 6, isCompleted: false, subTaskIndex: 1 },   // основание нижнего треугольника
+                    
+                    // СТВОЛ (subTaskIndex: 2)
+                    { x1: -1, y1: 6, x2: -1, y2: 8, isCompleted: false, subTaskIndex: 2 },  // левая сторона ствола
+                    { x1: 1, y1: 6, x2: 1, y2: 8, isCompleted: false, subTaskIndex: 2 },    // правая сторона ствола
+                    { x1: -1, y1: 8, x2: 1, y2: 8, isCompleted: false, subTaskIndex: 2 }    // основание ствола
+                ]
+            },
+            {
+                title: 'Узор по точкам',
+                type: 'pattern-dots',
+                instruction: 'Начни с синей точки и повтори узор',
+                gridSize: 5,
+                startPoint: 20,
+                points: [
+                    // Сетка 5x5 (25 точек)
+                    { x: 0.1, y: 0.1 }, { x: 0.3, y: 0.1 }, { x: 0.5, y: 0.1 }, { x: 0.7, y: 0.1 }, { x: 0.9, y: 0.1 },
+                    { x: 0.1, y: 0.3 }, { x: 0.3, y: 0.3 }, { x: 0.5, y: 0.3 }, { x: 0.7, y: 0.3 }, { x: 0.9, y: 0.3 },
+                    { x: 0.1, y: 0.5 }, { x: 0.3, y: 0.5 }, { x: 0.5, y: 0.5 }, { x: 0.7, y: 0.5 }, { x: 0.9, y: 0.5 },
+                    { x: 0.1, y: 0.7 }, { x: 0.3, y: 0.7 }, { x: 0.5, y: 0.7 }, { x: 0.7, y: 0.7 }, { x: 0.9, y: 0.7 },
+                    { x: 0.1, y: 0.9 }, { x: 0.3, y: 0.9 }, { x: 0.5, y: 0.9 }, { x: 0.7, y: 0.9 }, { x: 0.9, y: 0.9 }
+                ],
+                pattern: [
+                    // Равнобедренный треугольник (8 сегментов)
+                    [20, 11],  // Левая грань (часть 1)
+                    [11, 2],   // Левая грань (часть 2)
+                    [2, 13],   // Правая грань (часть 1)
+                    [13, 24],  // Правая грань (часть 2)
+                    [24, 23],  // Основание (часть 1)
+                    [23, 22],  // Основание (часть 2)
+                    [22, 21],  // Основание (часть 3)
+                    [21, 20]   // Основание (часть 4)
+                ]
+            }
         ],
         6: [
             { title: 'Квадратное окошко', type: 'grid-square', instruction: 'Проведи: 2 клетки вправо, 2 вниз, 2 влево, 2 вверх', 
@@ -299,6 +369,41 @@ function displayExercise(exercise) {
     gridPath = [];
     currentGridX = 0;
     currentGridY = 0;
+    
+    // Сброс переменных для Модуля 5 (Зрительно-моторное соотнесение)
+    mirrorTreeSegments = [];
+    mirrorTreeTargets = [];
+    completedSegments = [];
+    userDrawnPoints = [];
+    segmentStartPoints = [];
+    segmentEndPoints = [];
+    if (exercise.segments) {
+        // Копируем левый образец (видимый)
+        mirrorTreeSegments = JSON.parse(JSON.stringify(exercise.segments));
+        
+        // Создаем зеркальные отражения для правой стороны с сохранением isCompleted и subTaskIndex
+        mirrorTreeTargets = exercise.segments.map(seg => ({
+            x1: -seg.x1,  // Зеркальное отражение относительно x=0
+            y1: seg.y1,
+            x2: -seg.x2,
+            y2: seg.y2,
+            isCompleted: false,  // Все сегменты начинаются как невыполненные
+            subTaskIndex: seg.subTaskIndex  // Сохраняем индекс подзадачи
+        }));
+    }
+    
+    // Сброс переменных для pattern-dots (Узор по точкам)
+    patternPoints = [];
+    patternReference = [];
+    userConnections = [];
+    activePoint = null;
+    tempLine = null;
+    patternStartPoint = null;
+    if (exercise.points && exercise.pattern) {
+        patternPoints = JSON.parse(JSON.stringify(exercise.points));
+        patternReference = JSON.parse(JSON.stringify(exercise.pattern));
+        patternStartPoint = exercise.startPoint || null;
+    }
     
     // Показываем/скрываем соответствующие элементы управления
     const regularControls = document.querySelector('.controls');
@@ -458,6 +563,10 @@ function handleCanvasTouch(e) {
         currentExercise.type === 'combined-chain')) {
         startDrawingPath(e);
     }
+    // Модуль 5: Зрительно-моторное соотнесение
+    else if (currentExercise && currentExercise.type === 'mirror-tree') {
+        startDrawingMirrorTree(e);
+    }
     else {
         startDrawing(e);
     }
@@ -485,6 +594,10 @@ function handleCanvasClick(e) {
         currentExercise.type === 'meander-wall' ||
         currentExercise.type === 'combined-chain')) {
         startDrawingPath(e);
+    }
+    // Модуль 5: Зрительно-моторное соотнесение
+    else if (currentExercise && currentExercise.type === 'mirror-tree') {
+        startDrawingMirrorTree(e);
     }
     else {
         startDrawing(e);
@@ -613,6 +726,14 @@ function showErrorFeedback() {
 // Рисование
 function startDrawing(e) {
     e.preventDefault();
+    
+    // Модуль 5: Узор по точкам
+    if (currentExercise && currentExercise.type === 'pattern-dots') {
+        isDrawing = true;
+        startDrawingPatternDots(e);
+        return;
+    }
+    
     isDrawing = true;
     const pos = getPosition(e);
     ctx.beginPath();
@@ -624,6 +745,18 @@ function draw(e) {
     e.preventDefault();
     
     const pos = getPosition(e);
+    
+    // Модуль 5: Зрительно-моторное соотнесение
+    if (currentExercise && currentExercise.type === 'mirror-tree') {
+        drawMirrorTreeWithCheck(pos);
+        return;
+    }
+    
+    // Модуль 5: Узор по точкам
+    if (currentExercise && currentExercise.type === 'pattern-dots') {
+        drawPatternDotsWithCheck(pos);
+        return;
+    }
     
     // Модуль 2, 3 и 4: Проверка границ дорожки
     if (currentExercise && (currentExercise.type.startsWith('path-') || 
@@ -651,6 +784,12 @@ function stopDrawing(e) {
     isDrawing = false;
     ctx.closePath();
     
+    // Модуль 5: Узор по точкам
+    if (currentExercise && currentExercise.type === 'pattern-dots') {
+        stopDrawingPatternDots(e);
+        return;
+    }
+    
     // Модуль 2, 3 и 4: Проверка достижения финиша
     if (currentExercise && (currentExercise.type.startsWith('path-') || 
         currentExercise.type === 'rhythmic-fence' || 
@@ -660,6 +799,9 @@ function stopDrawing(e) {
         currentExercise.type === 'combined-chain')) {
         checkPathFinish();
     }
+    
+    // Модуль 5: Активация сегментов происходит в реальном времени в drawMirrorTreeWithCheck()
+    // Здесь больше ничего не нужно делать
 }
 
 function getPosition(e) {
@@ -670,6 +812,245 @@ function getPosition(e) {
         y: touch.clientY - rect.top
     };
 }
+
+// ============================================
+// МОДУЛЬ 5: ЗРИТЕЛЬНО-МОТОРНОЕ СООТНЕСЕНИЕ
+// ============================================
+
+// Начало рисования зеркальной елочки
+function startDrawingMirrorTree(e) {
+    e.preventDefault();
+    
+    if (exerciseCompleted) return;
+    
+    const pos = getPosition(e);
+    
+    // Вычисляем центральную ось (x=0 в координатах сегментов)
+    const gridCols = Math.floor(canvas.width / gridCellSize);
+    const centerGridX = gridCols / 2;
+    const centerPixelX = gridOffsetX + centerGridX * gridCellSize;
+    
+    // Проверяем, находимся ли мы в правой половине холста (целевая область)
+    if (pos.x < centerPixelX) {
+        return; // Рисование только справа
+    }
+    
+    // Начинаем рисование
+    isDrawing = true;
+    userDrawnPoints = [pos]; // Сбрасываем для каждого нового штриха
+    
+    // Сбрасываем отслеживание контрольных точек для нового штриха
+    segmentStartPoints = new Array(mirrorTreeTargets.length).fill(false);
+    segmentEndPoints = new Array(mirrorTreeTargets.length).fill(false);
+    
+    ctx.beginPath();
+    ctx.moveTo(pos.x, pos.y);
+}
+
+// Рисование с проверкой попадания в целевые сегменты
+function drawMirrorTreeWithCheck(pos) {
+    if (!isDrawing) return;
+    
+    userDrawnPoints.push(pos);
+    
+    // Вычисляем центральную ось
+    const gridCols = Math.floor(canvas.width / gridCellSize);
+    const centerGridX = gridCols / 2;
+    const centerPixelX = gridOffsetX + centerGridX * gridCellSize;
+    
+    // Проверяем, находимся ли мы в правой половине холста
+    if (pos.x < centerPixelX) {
+        showMirrorTreeError('Рисуй только справа!');
+        isDrawing = false;
+        ctx.closePath();
+        return;
+    }
+    
+    // Проверяем попадание в целевые сегменты
+    let isOnSegment = false;
+    
+    for (let i = 0; i < mirrorTreeTargets.length; i++) {
+        const seg = mirrorTreeTargets[i];
+        
+        // Пропускаем уже завершенные сегменты
+        if (seg.isCompleted) continue;
+        
+        // Пропускаем сегменты, не принадлежащие текущему этапу
+        if (seg.subTaskIndex !== currentSubTask) continue;
+        
+        // Преобразуем координаты сегмента в пиксели
+        const x1 = centerPixelX + seg.x1 * gridCellSize;
+        const y1 = gridOffsetY + seg.y1 * gridCellSize;
+        const x2 = centerPixelX + seg.x2 * gridCellSize;
+        const y2 = gridOffsetY + seg.y2 * gridCellSize;
+        
+        // Проверяем расстояние до линии сегмента
+        const distance = distanceToSegment(pos, seg, centerPixelX);
+        
+        if (distance <= treePathTolerance) {
+            isOnSegment = true;
+            
+            // Проверяем, прошли ли мы через начальную точку
+            const distToStart = Math.sqrt(Math.pow(pos.x - x1, 2) + Math.pow(pos.y - y1, 2));
+            if (distToStart <= pointTolerance) {
+                segmentStartPoints[i] = true;
+            }
+            
+            // Проверяем, прошли ли мы через конечную точку
+            const distToEnd = Math.sqrt(Math.pow(pos.x - x2, 2) + Math.pow(pos.y - y2, 2));
+            if (distToEnd <= pointTolerance) {
+                segmentEndPoints[i] = true;
+            }
+            
+            // Если прошли через обе точки - сегмент завершен
+            if (segmentStartPoints[i] && segmentEndPoints[i]) {
+                if (!seg.isCompleted) {
+                    seg.isCompleted = true;
+                    
+                    // Перерисовываем холст с новым активированным сегментом
+                    clearCanvas();
+                    drawMirrorTreeTemplate();
+                    
+                    // Проверяем, завершен ли текущий этап
+                    checkMirrorSubTaskCompletion();
+                }
+            }
+        }
+    }
+    
+    // Рисуем линию обратной связи
+    if (isOnSegment) {
+        ctx.strokeStyle = '#2196f3';
+        ctx.lineWidth = 4;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+    } else {
+        ctx.strokeStyle = '#ff5252';
+        ctx.lineWidth = 4;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+    }
+    
+    ctx.lineTo(pos.x, pos.y);
+    ctx.stroke();
+}
+
+function checkMirrorSubTaskCompletion() {
+    // Проверяем, выполнены ли все сегменты текущего этапа
+    const currentSubTaskSegments = mirrorTreeTargets.filter(seg => seg.subTaskIndex === currentSubTask);
+    const allSubTaskCompleted = currentSubTaskSegments.every(seg => seg.isCompleted);
+    
+    if (allSubTaskCompleted) {
+        // Увеличиваем номер текущего этапа
+        currentSubTask++;
+        
+        // Если это не последний этап - показываем промежуточную похвалу
+        if (currentSubTask < totalSubTasks) {
+            showMirrorFeedback('Молодец, продолжай!');
+        } else {
+            // Если это был последний этап - завершаем упражнение
+            completeMirrorTree();
+        }
+    }
+}
+
+// Вычисление расстояния от точки до сегмента
+function distanceToSegment(point, segment, centerPixelX) {
+    // Преобразуем координаты сегмента в пиксели
+    // centerPixelX - позиция зеленой оси (x=0 в координатах сегментов)
+    const x1 = centerPixelX + segment.x1 * gridCellSize;
+    const y1 = gridOffsetY + segment.y1 * gridCellSize;
+    const x2 = centerPixelX + segment.x2 * gridCellSize;
+    const y2 = gridOffsetY + segment.y2 * gridCellSize;
+    
+    // Вычисляем расстояние от точки до линии
+    const A = point.x - x1;
+    const B = point.y - y1;
+    const C = x2 - x1;
+    const D = y2 - y1;
+    
+    const dot = A * C + B * D;
+    const lenSq = C * C + D * D;
+    let param = -1;
+    
+    if (lenSq !== 0) param = dot / lenSq;
+    
+    let xx, yy;
+    
+    if (param < 0) {
+        xx = x1;
+        yy = y1;
+    } else if (param > 1) {
+        xx = x2;
+        yy = y2;
+    } else {
+        xx = x1 + param * C;
+        yy = y1 + param * D;
+    }
+    
+    const dx = point.x - xx;
+    const dy = point.y - yy;
+    return Math.sqrt(dx * dx + dy * dy);
+}
+
+// Проверка завершения сегментов
+function checkMirrorTreeCompletion() {
+    // Эта функция больше не используется, так как активация сегментов
+    // происходит в реальном времени в drawMirrorTreeWithCheck()
+    // Оставляем для совместимости, но логика перенесена в drawMirrorTreeWithCheck()
+}
+
+// Показ ошибки
+function showMirrorTreeError(message) {
+    const feedback = document.getElementById('feedback');
+    feedback.textContent = '❌ ' + message;
+    feedback.className = 'feedback error';
+    feedback.classList.remove('hidden');
+    
+    vibrateDevice();
+    
+    setTimeout(() => {
+        feedback.classList.add('hidden');
+    }, 1500);
+}
+
+// Показ промежуточной похвалы
+function showMirrorFeedback(message) {
+    const feedback = document.getElementById('feedback');
+    feedback.textContent = message;
+    feedback.className = 'feedback success';
+    feedback.classList.remove('hidden');
+    
+    setTimeout(() => {
+        feedback.classList.add('hidden');
+    }, 1500);
+}
+
+// Завершение упражнения
+function completeMirrorTree() {
+    exerciseCompleted = true;
+    isDrawing = false;
+    
+    const feedback = document.getElementById('feedback');
+    feedback.textContent = '🎉 Ты нарисовал красивую елочку!';
+    feedback.className = 'feedback';
+    feedback.classList.remove('hidden');
+    
+    // Показываем кнопку "Дальше"
+    document.getElementById('next-level-btn').classList.remove('hidden');
+    
+    setTimeout(() => {
+        nextExercise();
+    }, 2000);
+}
+
+// Вибрация устройства
+function vibrateDevice() {
+    if ('vibrate' in navigator) {
+        navigator.vibrate(50);
+    }
+}
+
 // ============================================
 // МОДУЛЬ 2: ДОРОЖКИ И ТРАЕКТОРИИ
 // ============================================
@@ -1553,6 +1934,14 @@ function drawExerciseTemplate(exercise) {
             break;
         case 'combined-chain':
             drawCombinedChain();
+            break;
+        
+        // Модуль 5: Зрительно-моторное соотнесение
+        case 'mirror-tree':
+            drawMirrorTreeTemplate();
+            break;
+        case 'pattern-dots':
+            drawPatternDots();
             break;
         
         // Модуль 6: Графические диктанты
@@ -3275,6 +3664,441 @@ function drawCombinedChain() {
         ctx.arc(lastPoint.x, lastPoint.y, 15, 0, Math.PI * 2);
         ctx.stroke();
     }
+}
+
+// ============================================
+// МОДУЛЬ 5: ЗРИТЕЛЬНО-МОТОРНОЕ СООТНЕСЕНИЕ
+// ============================================
+
+function drawMirrorTreeTemplate() {
+    // Параметры сетки
+    gridCellSize = 35; // Размер клетки в пикселях
+    const gridCols = Math.floor(canvas.width / gridCellSize);
+    const gridRows = Math.floor(canvas.height / gridCellSize);
+    
+    // Центрируем сетку
+    const totalGridWidth = gridCols * gridCellSize;
+    const totalGridHeight = gridRows * gridCellSize;
+    gridOffsetX = (canvas.width - totalGridWidth) / 2;
+    gridOffsetY = (canvas.height - totalGridHeight) / 2;
+    
+    // Вычисляем позицию центральной оси (x=0 в координатах сетки)
+    const centerGridX = gridCols / 2;
+    const centerPixelX = gridOffsetX + centerGridX * gridCellSize;
+    
+    // Рисуем фон сетки
+    ctx.fillStyle = '#f5f5f5';
+    ctx.fillRect(gridOffsetX, gridOffsetY, totalGridWidth, totalGridHeight);
+    
+    // Рисуем линии сетки (светло-серые)
+    ctx.strokeStyle = '#d0d0d0';
+    ctx.lineWidth = 1;
+    
+    // Вертикальные линии сетки
+    for (let i = 0; i <= gridCols; i++) {
+        const x = gridOffsetX + i * gridCellSize;
+        ctx.beginPath();
+        ctx.moveTo(x, gridOffsetY);
+        ctx.lineTo(x, gridOffsetY + totalGridHeight);
+        ctx.stroke();
+    }
+    
+    // Горизонтальные линии сетки
+    for (let i = 0; i <= gridRows; i++) {
+        const y = gridOffsetY + i * gridCellSize;
+        ctx.beginPath();
+        ctx.moveTo(gridOffsetX, y);
+        ctx.lineTo(gridOffsetX + totalGridWidth, y);
+        ctx.stroke();
+    }
+    
+    // Рисуем центральную ось симметрии (зеленая вертикальная линия)
+    ctx.strokeStyle = '#4caf50';
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(centerPixelX, gridOffsetY);
+    ctx.lineTo(centerPixelX, gridOffsetY + totalGridHeight);
+    ctx.stroke();
+    
+    // ============================================
+    // ЛЕВАЯ ЧАСТЬ: ВИДИМЫЙ ОБРАЗЕЦ (черные линии)
+    // ============================================
+    if (mirrorTreeSegments.length > 0) {
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 3;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        
+        for (let i = 0; i < mirrorTreeSegments.length; i++) {
+            const seg = mirrorTreeSegments[i];
+            const x1 = centerPixelX + seg.x1 * gridCellSize;
+            const y1 = gridOffsetY + seg.y1 * gridCellSize;
+            const x2 = centerPixelX + seg.x2 * gridCellSize;
+            const y2 = gridOffsetY + seg.y2 * gridCellSize;
+            
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.stroke();
+        }
+    }
+    
+    // ============================================
+    // ПРАВАЯ ЧАСТЬ: ТОЛЬКО ЗАВЕРШЕННЫЕ СЕГМЕНТЫ
+    // Невидимые сегменты НЕ отрисовываются вообще
+    // ============================================
+    if (mirrorTreeTargets.length > 0) {
+        ctx.strokeStyle = '#2196f3';
+        ctx.lineWidth = 4;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        
+        for (let i = 0; i < mirrorTreeTargets.length; i++) {
+            const seg = mirrorTreeTargets[i];
+            
+            // Рисуем ТОЛЬКО если сегмент завершен
+            if (seg.isCompleted) {
+                const x1 = centerPixelX + seg.x1 * gridCellSize;
+                const y1 = gridOffsetY + seg.y1 * gridCellSize;
+                const x2 = centerPixelX + seg.x2 * gridCellSize;
+                const y2 = gridOffsetY + seg.y2 * gridCellSize;
+                
+                ctx.beginPath();
+                ctx.moveTo(x1, y1);
+                ctx.lineTo(x2, y2);
+                ctx.stroke();
+            }
+        }
+    }
+}
+
+function drawPatternDots() {
+    // Инициализируем координаты точек в пиксели
+    const sideWidth = canvas.width / 2;
+    const sideHeight = canvas.height;
+    
+    // Преобразуем относительные координаты в пиксели
+    const pixelPoints = patternPoints.map(point => ({
+        x: point.x * sideWidth,
+        y: point.y * sideHeight
+    }));
+    
+    // ============================================
+    // ЛЕВАЯ ЧАСТЬ: ОБРАЗЕЦ (эталонный узор)
+    // ============================================
+    
+    // Рисуем точки образца
+    ctx.fillStyle = '#333333';
+    for (let i = 0; i < pixelPoints.length; i++) {
+        // Выделяем стартовую точку синим цветом
+        if (i === patternStartPoint) {
+            ctx.fillStyle = '#2196f3'; // Яркий синий для стартовой точки
+        } else {
+            ctx.fillStyle = '#333333'; // Серый для остальных
+        }
+        
+        ctx.beginPath();
+        ctx.arc(pixelPoints[i].x, pixelPoints[i].y, dotRadius, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    
+    // Рисуем линии образца
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    
+    for (let i = 0; i < patternReference.length; i++) {
+        const [startIdx, endIdx] = patternReference[i];
+        const start = pixelPoints[startIdx];
+        const end = pixelPoints[endIdx];
+        
+        ctx.beginPath();
+        ctx.moveTo(start.x, start.y);
+        ctx.lineTo(end.x, end.y);
+        ctx.stroke();
+    }
+    
+    // ============================================
+    // ПРАВАЯ ЧАСТЬ: ПОЛЕ ДЛЯ ВВОДА
+    // ============================================
+    
+    // Смещение для правой части
+    const rightOffset = sideWidth;
+    
+    // Определяем, какие точки уже использованы
+    const usedPoints = new Set();
+    for (let i = 0; i < userConnections.length; i++) {
+        const [startIdx, endIdx] = userConnections[i];
+        usedPoints.add(startIdx);
+        usedPoints.add(endIdx);
+    }
+    
+    // Рисуем точки справа (с подсветкой использованных и стартовой)
+    for (let i = 0; i < pixelPoints.length; i++) {
+        // Выделяем стартовую точку синим цветом
+        if (i === patternStartPoint) {
+            ctx.fillStyle = '#2196f3'; // Яркий синий для стартовой точки
+            ctx.beginPath();
+            ctx.arc(rightOffset + pixelPoints[i].x, pixelPoints[i].y, dotRadius + 2, 0, Math.PI * 2);
+            ctx.fill();
+        } else if (usedPoints.has(i)) {
+            // Использованная точка - желтая подсветка
+            ctx.fillStyle = '#ffeb3b';
+            ctx.beginPath();
+            ctx.arc(rightOffset + pixelPoints[i].x, pixelPoints[i].y, dotRadius + 2, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        // Сама точка - зеленая
+        ctx.fillStyle = '#4caf50';
+        ctx.beginPath();
+        ctx.arc(rightOffset + pixelPoints[i].x, pixelPoints[i].y, dotRadius, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    
+    // Рисуем линии, которые провел пользователь (ЖИРНЫЕ И ЯРКИЕ)
+    ctx.strokeStyle = '#1976d2'; // Более яркий синий
+    ctx.lineWidth = 5; // Увеличенная толщина
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    
+    for (let i = 0; i < userConnections.length; i++) {
+        const [startIdx, endIdx] = userConnections[i];
+        const start = pixelPoints[startIdx];
+        const end = pixelPoints[endIdx];
+        
+        ctx.beginPath();
+        ctx.moveTo(rightOffset + start.x, start.y);
+        ctx.lineTo(rightOffset + end.x, end.y);
+        ctx.stroke();
+    }
+    
+    // Рисуем временную линию при перемещении (ЖИРНЕЕ)
+    if (activePoint !== null && tempLine !== null) {
+        ctx.strokeStyle = '#ff9800';
+        ctx.lineWidth = 4; // Увеличенная толщина
+        ctx.setLineDash([5, 5]);
+        
+        const activePointPixel = pixelPoints[activePoint];
+        ctx.beginPath();
+        ctx.moveTo(rightOffset + activePointPixel.x, activePointPixel.y);
+        ctx.lineTo(rightOffset + tempLine.x, tempLine.y);
+        ctx.stroke();
+        
+        ctx.setLineDash([]);
+    }
+    
+    // Подсвечиваем активную точку (КРАСНАЯ)
+    if (activePoint !== null) {
+        const activePointPixel = pixelPoints[activePoint];
+        ctx.fillStyle = '#ff5252';
+        ctx.beginPath();
+        ctx.arc(rightOffset + activePointPixel.x, activePointPixel.y, dotRadius + 4, 0, Math.PI * 2);
+        ctx.fill();
+    }
+}
+
+// ============================================
+// PATTERN-DOTS: Вспомогательные функции
+// ============================================
+
+function getPointAtPosition(x, y) {
+    // Находит ближайшую точку в пределах допуска
+    const sideWidth = canvas.width / 2;
+    const sideHeight = canvas.height;
+    const rightOffset = sideWidth;
+    
+    // Проверяем, находимся ли мы в правой половине (поле ввода)
+    if (x < rightOffset) {
+        return null; // Только правая половина
+    }
+    
+    // Преобразуем относительные координаты в пиксели
+    const pixelPoints = patternPoints.map(point => ({
+        x: point.x * sideWidth,
+        y: point.y * sideHeight
+    }));
+    
+    // Ищем ближайшую точку с увеличенным допуском (магнит 25px)
+    let closestPoint = null;
+    let minDistance = 25; // Увеличенный допуск для лучшей "магнитности"
+    
+    for (let i = 0; i < pixelPoints.length; i++) {
+        const px = rightOffset + pixelPoints[i].x;
+        const py = pixelPoints[i].y;
+        
+        // Корректно вычисляем расстояние
+        const distance = Math.sqrt(Math.pow(x - px, 2) + Math.pow(y - py, 2));
+        
+        if (distance < minDistance) {
+            minDistance = distance;
+            closestPoint = i;
+        }
+    }
+    
+    return closestPoint;
+}
+
+function isValidConnection(startIdx, endIdx) {
+    // Проверяет, существует ли такое соединение в эталонном узоре
+    // Порядок не важен: [A,B] и [B,A] считаются одинаковыми
+    
+    for (let i = 0; i < patternReference.length; i++) {
+        const [a, b] = patternReference[i];
+        if ((a === startIdx && b === endIdx) || (a === endIdx && b === startIdx)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+function checkPatternCompletion() {
+    // Проверяет, завершен ли узор
+    // Все соединения пользователя должны совпадать с эталонным узором
+    
+    if (userConnections.length !== patternReference.length) {
+        return false; // Разное количество соединений
+    }
+    
+    // Проверяем, что каждое соединение пользователя есть в эталоне
+    for (let i = 0; i < userConnections.length; i++) {
+        const [startIdx, endIdx] = userConnections[i];
+        if (!isValidConnection(startIdx, endIdx)) {
+            return false; // Соединение не совпадает
+        }
+    }
+    
+    // Проверяем, что каждое соединение из эталона есть у пользователя
+    for (let i = 0; i < patternReference.length; i++) {
+        const [a, b] = patternReference[i];
+        let found = false;
+        
+        for (let j = 0; j < userConnections.length; j++) {
+            const [startIdx, endIdx] = userConnections[j];
+            if ((a === startIdx && b === endIdx) || (a === endIdx && b === startIdx)) {
+                found = true;
+                break;
+            }
+        }
+        
+        if (!found) {
+            return false; // Не хватает соединения
+        }
+    }
+    
+    return true; // Все соединения совпадают
+}
+
+function startDrawingPatternDots(e) {
+    e.preventDefault();
+    
+    if (exerciseCompleted) return;
+    
+    const pos = getPosition(e);
+    const pointIdx = getPointAtPosition(pos.x, pos.y);
+    
+    if (pointIdx !== null) {
+        activePoint = pointIdx;
+        tempLine = null;
+        
+        // Перерисовываем холст
+        clearCanvas();
+        drawPatternDots();
+    }
+}
+
+function drawPatternDotsWithCheck(pos) {
+    if (activePoint === null) return;
+    
+    // Обновляем временную линию
+    tempLine = { x: pos.x, y: pos.y };
+    
+    // Перерисовываем холст
+    clearCanvas();
+    drawPatternDots();
+}
+
+function stopDrawingPatternDots(e) {
+    if (activePoint === null) return;
+    
+    e.preventDefault();
+    
+    const pos = getPosition(e);
+    const endPointIdx = getPointAtPosition(pos.x, pos.y);
+    
+    // Линия фиксируется только если палец находится рядом с точкой
+    if (endPointIdx !== null && endPointIdx !== activePoint) {
+        // Проверяем, валидно ли это соединение
+        if (isValidConnection(activePoint, endPointIdx)) {
+            // Проверяем, не добавлено ли уже это соединение
+            let alreadyExists = false;
+            for (let i = 0; i < userConnections.length; i++) {
+                const [a, b] = userConnections[i];
+                if ((a === activePoint && b === endPointIdx) || (a === endPointIdx && b === activePoint)) {
+                    alreadyExists = true;
+                    break;
+                }
+            }
+            
+            if (!alreadyExists) {
+                // Добавляем соединение
+                userConnections.push([activePoint, endPointIdx]);
+                
+                // Проверяем, завершен ли узор (все 8 сегментов)
+                if (checkPatternCompletion()) {
+                    completePatternDotsExercise();
+                } else {
+                    // Показываем успех для этого соединения
+                    showPatternFeedback('✓ Правильно!');
+                }
+            } else {
+                showPatternFeedback('⚠️ Уже соединено!');
+            }
+        } else {
+            showPatternFeedback('✗ Неправильно!');
+        }
+    }
+    // Если палец отпущен далеко от точек - временная линия сбрасывается
+    
+    // Сбрасываем активную точку
+    activePoint = null;
+    tempLine = null;
+    
+    // Перерисовываем холст
+    clearCanvas();
+    drawPatternDots();
+}
+
+function showPatternFeedback(message) {
+    const feedback = document.getElementById('feedback');
+    feedback.textContent = message;
+    feedback.className = 'feedback success';
+    feedback.classList.remove('hidden');
+    
+    // Скрываем через 1.5 секунды
+    setTimeout(() => {
+        feedback.classList.add('hidden');
+    }, 1500);
+}
+
+function completePatternDotsExercise() {
+    exerciseCompleted = true;
+    
+    const feedback = document.getElementById('feedback');
+    feedback.textContent = '🎉 Отлично! Узор готов!';
+    feedback.className = 'feedback success';
+    feedback.classList.remove('hidden');
+    
+    // Показываем кнопку "Дальше"
+    document.getElementById('next-level-btn').classList.remove('hidden');
+    
+    // Обновляем статистику
+    const endTime = Date.now();
+    const timeTaken = (endTime - startTime) / 1000;
+    stats.successfulExercises++;
+    stats.totalTime += timeTaken;
+    saveStats();
 }
 
 // Остальные шаблоны (для других модулей)
